@@ -1,0 +1,8 @@
+.vscode/
+rssagg
+.env
+.idea/
+
+# Dpendency dirs
+
+/vendor/

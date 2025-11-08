@@ -11,6 +11,7 @@ type UserResponse struct {
 	ID        int32     `json:"id"`
 	Name      string    `json:"nme"`
 	Email     string    `json:"email"`
+	Password  string    `json:"password"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -20,6 +21,7 @@ func SerializeUser(u *db.User) *UserResponse {
 		ID:        u.ID,
 		Name:      u.Name,
 		Email:     u.Email,
+		Password:  u.Password,
 		CreatedAt: u.CreatedAt.Time,
 	}
 }

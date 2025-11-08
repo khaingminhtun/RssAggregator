@@ -18,6 +18,7 @@ func Init(r chi.Router, cfg *config.Config) {
 func SetupRoutes(r chi.Router, userHandler *UserHandler) {
 	r.Route("/users", func(r chi.Router) {
 		r.Post("/create-user", userHandler.CreateUser)
+		r.Get("/{id}", userHandler.GetUserById)
 		// Add other endpoints here
 	})
 }

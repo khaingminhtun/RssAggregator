@@ -9,8 +9,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/khaingminhtun/rssagg/api/users"
+	"github.com/khaingminhtun/rssagg/api/users/routers"
 	"github.com/khaingminhtun/rssagg/config"
+	middleware "github.com/khaingminhtun/rssagg/middlewares"
 
 	"github.com/joho/godotenv"
 )
@@ -41,12 +42,16 @@ func main() {
 		MaxAge:           300,
 	}))
 
+	//middlewars
+	router.Use(middleware.Logger)
+	router.Use(middleware.RateLimiter(1, 3))
+
 	// Load config
 	cfg := config.NewConfig()
 
 	// Register your routes directly on 'router'
 	router.Route("/v1", func(r chi.Router) {
-		users.Init(r, cfg)
+		routers.Init(r, cfg)
 	})
 
 	server := &http.Server{

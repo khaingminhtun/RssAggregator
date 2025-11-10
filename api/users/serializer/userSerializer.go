@@ -1,33 +1,36 @@
-package users
+package serializer
 
 import (
 	"time"
 
 	"github.com/khaingminhtun/rssagg/internal/db"
+	"github.com/khaingminhtun/rssagg/utils"
 )
 
 // UserResponse is what your API sends to client
 type UserResponse struct {
-	ID        int32     `json:"id"`
+	ID        string    `json:"id"`
 	Name      string    `json:"nme"`
 	Email     string    `json:"email"`
-	Password  string    `json:"password"`
 	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"update_at"`
 }
 
 // SerializeUser maps DB model → API model
 func SerializeUser(u *db.User) *UserResponse {
+
 	return &UserResponse{
-		ID:        u.ID,
+		ID:        utils.UUIDToString(u.ID),
 		Name:      u.Name,
 		Email:     u.Email,
-		Password:  u.Password,
 		CreatedAt: u.CreatedAt.Time,
+		UpdatedAt: u.UpdatedAt.Time,
 	}
 }
 
 // SerializeUsers maps slice of users
 func SerializeUsers(users []*db.User) []*UserResponse {
+
 	out := make([]*UserResponse, len(users))
 	for i, u := range users {
 		out[i] = SerializeUser(u)

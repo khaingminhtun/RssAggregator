@@ -1,4 +1,4 @@
-package serializer
+package dtos
 
 import (
 	"time"

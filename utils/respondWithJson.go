@@ -5,14 +5,15 @@ import (
 	"net/http"
 )
 
+// RespondWithJSON writes any payload as JSON with the given HTTP status code
 func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, err := json.Marshal(payload)
-	if err != nil {
-		http.Error(w, "failed to encode JSON", http.StatusInternalServerError)
-		return
-	}
-
+	// Set content-type header first
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	w.Write(response)
+
+	// Encode payload to JSON
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		// If encoding fails, return internal server error
+		http.Error(w, `{"success":false,"message":"failed to encode JSON"}`, http.StatusInternalServerError)
+	}
 }

@@ -9,7 +9,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/khaingminhtun/rssagg/api/users/routers"
+	userRouters "github.com/khaingminhtun/rssagg/api/users/routers"
+	authRouters "github.com/khaingminhtun/rssagg/auth/routers"
 	"github.com/khaingminhtun/rssagg/config"
 	middleware "github.com/khaingminhtun/rssagg/middlewares"
 
@@ -51,7 +52,8 @@ func main() {
 
 	// Register your routes directly on 'router'
 	router.Route("/v1", func(r chi.Router) {
-		routers.Init(r, cfg)
+		authRouters.Init(r, cfg)
+		userRouters.Init(r, cfg)
 	})
 
 	server := &http.Server{

@@ -7,13 +7,11 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/khaingminhtun/rssagg/config"
 	"github.com/khaingminhtun/rssagg/internal/db"
-	"github.com/khaingminhtun/rssagg/security/jwtauth"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
 	config *config.Config
-	jwt    *jwtauth.JWTAuth
 }
 
 func NewUserService(c *config.Config) *UserService {
@@ -50,16 +48,6 @@ func (s *UserService) RegisterUser(ctx context.Context, name, email, passwordHas
 	}, nil
 
 }
-
-// sign in user
-// func (s *UserService) Authenticate(ctx context.Context, email, password string) (string, error) {
-
-// 	// fetch user from db
-// 	user, err := s.config.DB.GetUserByEmail(ctx, email)
-// 	if err != nil {
-// 		return "", errors.New("user not found with this ", email)
-// 	}
-// }
 
 // get user one
 func (s *UserService) GetUserById(ctx context.Context, id pgtype.UUID) (*db.User, error) {

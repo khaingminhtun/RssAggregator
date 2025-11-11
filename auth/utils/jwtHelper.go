@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/khaingminhtun/rssagg/security/jwtauth"
+	"github.com/khaingminhtun/rssagg/auth/jwtauth"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 

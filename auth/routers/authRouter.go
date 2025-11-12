@@ -20,6 +20,9 @@ func Init(r chi.Router, cfg *config.Config) {
 func SetupRoutes(r chi.Router, authHandler *handlers.AuthHandler) {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
+		r.Post("/login", authHandler.Authenicate)
+		r.Post("/getrefreshtoken", authHandler.GetRefreshToken)
+		r.Post("/logout", authHandler.Logout)
 
 		// Add other endpoints here
 	})

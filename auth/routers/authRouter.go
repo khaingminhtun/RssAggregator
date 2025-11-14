@@ -26,4 +26,14 @@ func SetupRoutes(r chi.Router, authHandler *handlers.AuthHandler) {
 
 		// Add other endpoints here
 	})
+
+	// Define our OAuth routes:
+	// /oauth/{provider} -> initiates the OAuth flow
+	// /oauth/{provider}/callback -> handles the callback from the OAuth provider
+	r.Route("/oauth", func(r chi.Router) {
+		r.Route("/{provider}", func(r chi.Router) {
+			r.Get("/", GetOAuthFlow)
+			r.Get("/callback", GetOAuthCallback)
+		})
+	})
 }

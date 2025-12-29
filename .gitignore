@@ -1,13 +1,16 @@
 # Environment variables
-./.env
+.env
 
 # Vendor directory
-./vendor/
+vendor/
 
 # Compiled binaries
-./bin/
-./bin/rssagg
-./Makefile
+bin/
+bin/rssagg
+
+# Makefile (if you really want to ignore it)
+Makefile
+
 # OS files
 .DS_Store
 Thumbs.db

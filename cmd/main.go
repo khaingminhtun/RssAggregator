@@ -35,7 +35,7 @@ func main() {
 	//4. Initialize application struct
 	app := &application{
 		config: *cfg,
-		//db
+		db:     dbConn,
 	}
 
 	//5. Set up routes

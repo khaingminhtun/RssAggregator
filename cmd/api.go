@@ -1,18 +1,21 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5"
+	repo "github.com/khaingminhtun/rssagg/internal/adapters/database/db"
+	"github.com/khaingminhtun/rssagg/internal/auth"
 	"github.com/khaingminhtun/rssagg/internal/config"
 )
 
 type application struct {
 	config config.Config
-	//db
-
+	db     *pgx.Conn
 }
 
 // routes sets up the application routes and middleware
@@ -28,6 +31,12 @@ func (app *application) routes() http.Handler {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("all good"))
 	})
+
+	//authentication
+	authService := auth.NewAuthService(repo.New(app.db))
+	authHandler := auth.NewAuthHandler(authService)
+	r.Post("/api/v1/register", authHandler.RegisterUser)
+
 	return r
 }
 
@@ -38,5 +47,6 @@ func (app *application) run(h http.Handler) error {
 		WriteTimeout: 30 * time.Second,
 		ReadTimeout:  10 * time.Second,
 	}
+	log.Printf("server has started at addr %s", app.config.Addr)
 	return srv.ListenAndServe()
 }

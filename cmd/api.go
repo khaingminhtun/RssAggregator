@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5"
-	repo "github.com/khaingminhtun/rssagg/internal/adapters/database/db"
+	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
 	"github.com/khaingminhtun/rssagg/internal/auth"
 	"github.com/khaingminhtun/rssagg/internal/config"
 )
@@ -31,6 +31,10 @@ func (app *application) routes() http.Handler {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("all good"))
 	})
+
+	//initialize jwt
+	jwtSVc := auth.NewJWTService(app.config.JWT.Secret, app.config.JWT.Issuer)
+	
 
 	//authentication
 	authService := auth.NewAuthService(repo.New(app.db))

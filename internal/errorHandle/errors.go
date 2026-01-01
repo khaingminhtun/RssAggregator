@@ -11,6 +11,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInvalidInput       = errors.New("invalid input")
 	ErrInternal           = errors.New("internal error")
+	ErrUserNotFound       = errors.New("user not found")
 )
 
 func IsUniqueViolation(err error) bool {

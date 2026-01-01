@@ -34,7 +34,7 @@ type User struct {
 	PasswordHash string             `json:"password_hash"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	AuthType     string             `json:"auth_type"`
+	AuthType     pgtype.Text        `json:"auth_type"`
 }
 
 type UserFeed struct {

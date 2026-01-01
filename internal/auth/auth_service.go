@@ -3,7 +3,8 @@ package auth
 import (
 	"context"
 
-	repo "github.com/khaingminhtun/rssagg/internal/adapters/database/db"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
 	"github.com/khaingminhtun/rssagg/internal/errorHandle"
 	"github.com/khaingminhtun/rssagg/internal/log"
 	"github.com/khaingminhtun/rssagg/internal/utils"
@@ -11,6 +12,7 @@ import (
 
 type AuthService interface {
 	RegisterUser(ctx context.Context, request RegisterRequest) error
+	AuthenticateUser(ctx context.Context, request AuthRequest) error
 }
 
 type service struct {
@@ -21,6 +23,7 @@ func NewAuthService(repo repo.Querier) AuthService {
 	return &service{repo: repo}
 }
 
+// 1. register user
 func (s *service) RegisterUser(ctx context.Context, request RegisterRequest) error {
 
 	//1. input
@@ -39,7 +42,10 @@ func (s *service) RegisterUser(ctx context.Context, request RegisterRequest) err
 		Name:         request.Name,
 		Email:        request.Email,
 		PasswordHash: hashedPassword,
-		AuthType:     "local",
+		AuthType: pgtype.Text{
+			String: string(AuthTypeLocal),
+			Valid:  true,
+		},
 	})
 
 	if err != nil {
@@ -50,6 +56,30 @@ func (s *service) RegisterUser(ctx context.Context, request RegisterRequest) err
 		return errorHandle.ErrInternal
 	}
 	log.Info("user registered successfully", "user_id", user.ID)
+
+	return nil
+}
+
+// 2. Authenticate user
+func (s *service) AuthenticateUser(ctx context.Context, request AuthRequest) error {
+	// 1. input
+	if request.Email == "" || request.Password == "" {
+		return errorHandle.ErrInvalidInput
+	}
+
+	// 2. get user from db
+	user, err := s.repo.GetUserByEmail(ctx, request.Email)
+	if err != nil {
+		return errorHandle.ErrUserNotFound
+	}
+
+	// 3. verify password
+	if err := utils.CheckPassword(user.PasswordHash, request.Password); err != nil {
+		return errorHandle.ErrInvalidCredentials
+	}
+	
+
+	log.Info("user authenticated successfully", "user_id", user.ID)
 
 	return nil
 }

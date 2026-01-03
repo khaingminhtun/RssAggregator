@@ -12,15 +12,16 @@ import (
 
 type AuthService interface {
 	RegisterUser(ctx context.Context, request RegisterRequest) error
-	AuthenticateUser(ctx context.Context, request AuthRequest) error
+	AuthenticateUser(ctx context.Context, request AuthRequest) (*AuthResponse, error)
 }
 
 type service struct {
 	repo repo.Querier
+	jwt  *JWTService
 }
 
-func NewAuthService(repo repo.Querier) AuthService {
-	return &service{repo: repo}
+func NewAuthService(repo repo.Querier, jwtSvc *JWTService) AuthService {
+	return &service{repo: repo, jwt: jwtSvc}
 }
 
 // 1. register user
@@ -61,25 +62,38 @@ func (s *service) RegisterUser(ctx context.Context, request RegisterRequest) err
 }
 
 // 2. Authenticate user
-func (s *service) AuthenticateUser(ctx context.Context, request AuthRequest) error {
+func (s *service) AuthenticateUser(ctx context.Context, request AuthRequest) (*AuthResponse, error) {
 	// 1. input
 	if request.Email == "" || request.Password == "" {
-		return errorHandle.ErrInvalidInput
+		return nil, errorHandle.ErrInvalidInput
 	}
 
 	// 2. get user from db
 	user, err := s.repo.GetUserByEmail(ctx, request.Email)
 	if err != nil {
-		return errorHandle.ErrUserNotFound
+		return nil, errorHandle.ErrUserNotFound
 	}
 
 	// 3. verify password
 	if err := utils.CheckPassword(user.PasswordHash, request.Password); err != nil {
-		return errorHandle.ErrInvalidCredentials
+		return nil, errorHandle.ErrInvalidCredentials
 	}
-	
+
+	// 4. generate access and refresh tokens
+	accessToken, err := s.jwt.GenerateAccessToken(user.ID)
+	if err != nil {
+		return nil, errorHandle.ErrInternal
+	}
+
+	refreshToken, err := s.jwt.GenerateRefreshToken(user.ID)
+	if err != nil {
+		return nil, errorHandle.ErrInternal
+	}
 
 	log.Info("user authenticated successfully", "user_id", user.ID)
 
-	return nil
+	return &AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }

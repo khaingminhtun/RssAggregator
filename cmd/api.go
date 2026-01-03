@@ -33,13 +33,13 @@ func (app *application) routes() http.Handler {
 	})
 
 	//initialize jwt
-	jwtSVc := auth.NewJWTService(app.config.JWT.Secret, app.config.JWT.Issuer)
-	
+	jwtSVc := auth.NewJWTService(app.config.JWT)
 
 	//authentication
-	authService := auth.NewAuthService(repo.New(app.db))
+	authService := auth.NewAuthService(repo.New(app.db), jwtSVc)
 	authHandler := auth.NewAuthHandler(authService)
 	r.Post("/api/v1/register", authHandler.RegisterUser)
+	r.Post("/api/v1/login", authHandler.Authenticate)
 
 	return r
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/khaingminhtun/rssagg/internal/config"
 )
 
 // Define errors for better error handling in your handlers
@@ -28,26 +29,30 @@ type TokenPair struct {
 
 // JWTService handles the creation and parsing of tokens
 type JWTService struct {
-	secret []byte
-	issuer string
+	secret        []byte
+	issuer        string
+	accessExpiry  time.Duration
+	refreshExpiry time.Duration
 }
 
 // NewJWTService initializes the service with config values
-func NewJWTService(secret, issuer string) *JWTService {
+func NewJWTService(cfg config.JWTConfig) *JWTService {
 	return &JWTService{
-		secret: []byte(secret),
-		issuer: issuer,
+		secret:        []byte(cfg.Secret),
+		issuer:        cfg.Issuer,
+		accessExpiry:  cfg.AccessExpiry,
+		refreshExpiry: cfg.RefreshExpiry,
 	}
 }
 
 // GenerateAccessToken creates a short-lived token (e.g., 15 mins) for API access
-func (s *JWTService) GenerateAccessToken(userID int32, expiry time.Duration) (string, error) {
-	return s.createToken(userID, expiry)
+func (s *JWTService) GenerateAccessToken(userID int32) (string, error) {
+	return s.createToken(userID, s.accessExpiry)
 }
 
 // GenerateRefreshToken creates a long-lived token (e.g., 7 days)
-func (s *JWTService) GenerateRefreshToken(userID int32, expiry time.Duration) (string, error) {
-	return s.createToken(userID, expiry)
+func (s *JWTService) GenerateRefreshToken(userID int32) (string, error) {
+	return s.createToken(userID, s.refreshExpiry)
 }
 
 // createToken is a private helper to sign the JWT

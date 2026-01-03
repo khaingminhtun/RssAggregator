@@ -7,8 +7,6 @@ const (
 	AuthTypeOAuth AuthType = "oauth"
 )
 
-
-
 type RegisterRequest struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
@@ -20,5 +18,7 @@ type AuthRequest struct {
 	Password string `json:"password"`
 }
 
-
-
+type AuthResponse struct {
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -40,7 +41,17 @@ func (app *application) routes() http.Handler {
 	authHandler := auth.NewAuthHandler(authService)
 	r.Post("/api/v1/register", authHandler.RegisterUser)
 	r.Post("/api/v1/login", authHandler.Authenticate)
+	r.Post("/api/v1/refresh", authHandler.RefreshToken)
+	r.Post("/api/v1/logout", authHandler.Logout)
 
+	//protected routes example
+	r.Group(func(r chi.Router) {
+		r.Use(jwtSVc.JWTMiddleware)
+		r.Get("/api/v1/me", func(w http.ResponseWriter, r *http.Request) {
+			userID, _ := auth.UserIDFromContext(r.Context())
+			w.Write([]byte(fmt.Sprintf("your user id: %d", userID)))
+		})
+	})
 	return r
 }
 

@@ -14,6 +14,8 @@ type Feed struct {
 	Url           string             `json:"url"`
 	LastFetchedAt pgtype.Timestamptz `json:"last_fetched_at"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	SiteUrl       pgtype.Text        `json:"site_url"`
+	Description   pgtype.Text        `json:"description"`
 }
 
 type Post struct {
@@ -23,7 +25,7 @@ type Post struct {
 	Url         string             `json:"url"`
 	Description pgtype.Text        `json:"description"`
 	PublishedAt pgtype.Timestamptz `json:"published_at"`
-	Guid        string             `json:"guid"`
+	Guid        pgtype.Text        `json:"guid"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 

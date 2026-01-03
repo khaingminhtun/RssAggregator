@@ -13,6 +13,7 @@ import (
 type AuthService interface {
 	RegisterUser(ctx context.Context, request RegisterRequest) error
 	AuthenticateUser(ctx context.Context, request AuthRequest) (*AuthResponse, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*AuthResponse, error)
 }
 
 type service struct {
@@ -95,5 +96,31 @@ func (s *service) AuthenticateUser(ctx context.Context, request AuthRequest) (*A
 	return &AuthResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+	}, nil
+}
+
+func (s *service) RefreshToken(ctx context.Context, refreshToken string) (*AuthResponse, error) {
+	claims, err := s.jwt.ValidateToken(refreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	userID := claims.UserID
+
+	accessToken, err := s.jwt.GenerateAccessToken(userID)
+	if err != nil {
+		return nil, errorHandle.ErrInternal
+	}
+
+	newRefreshToken, err := s.jwt.GenerateRefreshToken(userID)
+	if err != nil {
+		return nil, errorHandle.ErrInternal
+	}
+
+	log.Info("refresh token route", "user_id", userID)
+
+	return &AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: newRefreshToken,
 	}, nil
 }

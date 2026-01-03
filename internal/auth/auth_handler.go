@@ -32,7 +32,7 @@ func (h *AuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.RespondJSON(w, http.StatusCreated, json.SuccessResponse[any]{Data: "user registered successfully"})
+	json.RespondJSON(w, http.StatusCreated, "user registered successfulyy", nil)
 
 }
 
@@ -63,6 +63,40 @@ func (h *AuthHandler) Authenticate(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   7 * 24 * 60 * 60,
 	})
 
-	json.RespondJSON(w, http.StatusOK, json.SuccessResponse[any]{Data: resp.AccessToken})
+	json.RespondJSON(w, http.StatusOK, "user log in successfully", resp.AccessToken)
 
 }
+
+// refresh token
+func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	var req RefreshRequest
+
+	if !json.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	resp, err := h.AuthService.RefreshToken(r.Context(), req.RefreshToken)
+	if err != nil {
+		errorHandle.RespondHTTPError(w, err)
+		return
+	}
+
+	json.RespondJSON(w, http.StatusOK, "refresh token successfully", resp.AccessToken)
+}
+
+// logout
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	// Clear the refresh token cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,                // set to true in production
+		SameSite: http.SameSiteLaxMode, // keep same as login
+		MaxAge:   -1,                   // negative MaxAge deletes the cookie
+	})
+
+	json.RespondJSON(w, http.StatusOK, "user logged out successfully", nil)
+}
+

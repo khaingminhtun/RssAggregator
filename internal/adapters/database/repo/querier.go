@@ -9,7 +9,11 @@ import (
 )
 
 type Querier interface {
+	CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, error)
+	CreatePost(ctx context.Context, arg CreatePostParams) (Post, error)
+	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (UserFeed, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	GetFeedByURL(ctx context.Context, url string) (Feed, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserById(ctx context.Context, id int32) (User, error)
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
 	"github.com/khaingminhtun/rssagg/internal/auth"
 	"github.com/khaingminhtun/rssagg/internal/config"
+	"github.com/khaingminhtun/rssagg/internal/feeds"
 )
 
 type application struct {
@@ -44,7 +45,16 @@ func (app *application) routes() http.Handler {
 	r.Post("/api/v1/refresh", authHandler.RefreshToken)
 	r.Post("/api/v1/logout", authHandler.Logout)
 
-	//protected routes example
+	// --- Feeds ---
+	fetcher := &feeds.FetcherService{
+		HttpClient: &http.Client{},
+	}
+	feedService := feeds.NewFeedService(repo.New(app.db), fetcher)
+	feedHandler := feeds.NewFeedHandler(feedService)
+
+	r.Post("/api/v1/createFeed", feedHandler.CreateFeed)
+
+	//protected routes example)
 	r.Group(func(r chi.Router) {
 		r.Use(jwtSVc.JWTMiddleware)
 		r.Get("/api/v1/me", func(w http.ResponseWriter, r *http.Request) {

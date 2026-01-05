@@ -21,7 +21,7 @@ type CreateFeedParams struct {
 	Url         string      `json:"url"`
 	Title       string      `json:"title"`
 	Description pgtype.Text `json:"description"`
-	SiteUrl     pgtype.Text `json:"site_url"`
+	SiteUrl     string      `json:"site_url"`
 }
 
 func (q *Queries) CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, error) {

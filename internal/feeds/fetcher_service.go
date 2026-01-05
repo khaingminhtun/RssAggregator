@@ -11,11 +11,11 @@ import (
 )
 
 type FetcherService struct {
-	httpClient *http.Client
+	HttpClient *http.Client
 }
 
 func (f *FetcherService) DiscoverFeed(siteURL string) (string, error) {
-	resp, err := f.httpClient.Get(siteURL)
+	resp, err := f.HttpClient.Get(siteURL)
 	if err != nil {
 		return "", err
 	}

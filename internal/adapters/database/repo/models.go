@@ -14,7 +14,7 @@ type Feed struct {
 	Url           string             `json:"url"`
 	LastFetchedAt pgtype.Timestamptz `json:"last_fetched_at"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	SiteUrl       pgtype.Text        `json:"site_url"`
+	SiteUrl       string             `json:"site_url"`
 	Description   pgtype.Text        `json:"description"`
 }
 

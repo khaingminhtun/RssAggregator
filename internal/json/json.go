@@ -42,8 +42,8 @@ func RespondJSON(w http.ResponseWriter, code int, message string, data any) {
 }
 
 // RespondError simplifies sending error messages
-func RespondError(w http.ResponseWriter, code int, message string) {
-	RespondJSON(w, code, message, nil)
+func RespondError(w http.ResponseWriter, code int, data any) {
+	RespondJSON(w, code, "", data)
 }
 
 // DecodeJSON remains the same, but uses the new RespondError

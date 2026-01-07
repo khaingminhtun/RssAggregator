@@ -62,3 +62,16 @@ func (q *Queries) GetFeedByURL(ctx context.Context, url string) (Feed, error) {
 	)
 	return i, err
 }
+
+const getFeedURLByID = `-- name: GetFeedURLByID :one
+SELECT url
+FROM feeds
+WHERE id = $1
+`
+
+func (q *Queries) GetFeedURLByID(ctx context.Context, id int32) (string, error) {
+	row := q.db.QueryRow(ctx, getFeedURLByID, id)
+	var url string
+	err := row.Scan(&url)
+	return url, err
+}

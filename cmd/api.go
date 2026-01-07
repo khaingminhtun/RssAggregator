@@ -53,6 +53,7 @@ func (app *application) routes() http.Handler {
 	feedHandler := feeds.NewFeedHandler(feedService)
 
 	r.Post("/api/v1/createFeed", feedHandler.CreateFeed)
+	r.Get("/api/v1/feeds/{feedID}/posts", feedHandler.GetFeedPosts)
 
 	//protected routes example)
 	r.Group(func(r chi.Router) {

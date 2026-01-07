@@ -2,7 +2,9 @@ package feeds
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/khaingminhtun/rssagg/internal/utils"
@@ -21,6 +23,10 @@ func (f *FetcherService) DiscoverFeed(siteURL string) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("failed to fetch site: %s", resp.Status)
+	}
+
 	doc, err := html.Parse(resp.Body)
 	if err != nil {
 		return "", err
@@ -28,35 +34,84 @@ func (f *FetcherService) DiscoverFeed(siteURL string) (string, error) {
 
 	var feedURL string
 	var walker func(*html.Node)
+
 	walker = func(n *html.Node) {
+		if feedURL != "" {
+			return // stop once found
+		}
+
 		if n.Type == html.ElementNode && n.Data == "link" {
-			var isRSS bool
-			var href string
+			var (
+				isAlternate bool
+				isFeed      bool
+				href        string
+			)
 
 			for _, attr := range n.Attr {
-				if attr.Key == "type" && strings.Contains(attr.Val, "rss") {
-					isRSS = true
-				}
-				if attr.Key == "href" {
+				switch strings.ToLower(attr.Key) {
+				case "rel":
+					if strings.Contains(strings.ToLower(attr.Val), "alternate") {
+						isAlternate = true
+					}
+				case "type":
+					val := strings.ToLower(attr.Val)
+					if strings.Contains(val, "rss") || strings.Contains(val, "atom") {
+						isFeed = true
+					}
+				case "href":
 					href = attr.Val
 				}
 			}
 
-			if isRSS && href != "" {
-				feedURL = href
+			if isAlternate && isFeed && href != "" {
+				feedURL = utils.ResolveURL(siteURL, href)
+				return
 			}
 		}
+
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
 			walker(c)
 		}
 	}
+
 	walker(doc)
 
-	if feedURL == "" {
-		return "", errors.New("no RSS feed found")
+	// HTML discovery success
+	if feedURL != "" {
+		return feedURL, nil
 	}
 
-	return utils.ResolveURL(siteURL, feedURL), nil
+	// -------- Fallback heuristics --------
+
+	fallbacks := []string{
+		"/feed",
+		"/rss",
+		"/rss.xml",
+		"/feed.xml",
+		"/atom.xml",
+		"/blog/feed",
+		"/blog/feed.atom",
+	}
+
+	base, err := url.Parse(siteURL)
+	if err != nil {
+		return "", err
+	}
+
+	for _, path := range fallbacks {
+		u := base.ResolveReference(&url.URL{Path: path})
+		resp, err := f.HttpClient.Get(u.String())
+		if err != nil {
+			continue
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return u.String(), nil
+		}
+	}
+
+	return "", errors.New("no RSS or Atom feed found")
 }
 
 func (f *FetcherService) FetchAndParse(feedURL string) (*gofeed.Feed, error) {

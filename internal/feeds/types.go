@@ -7,9 +7,13 @@ type RequestSiteURL struct {
 }
 
 type FeedResponse struct {
-	Title   string `json:"title"`
-	SiteURL string `json:"siteURL"`
-	FeedURL string `json:"feedURL"`
+	ID            int32     `json:"id"`
+	Title         string    `json:"title"`
+	Description   string    `json:"description"`
+	WebsiteUrl    string    `json:"websiteUrl"`
+	FeedURL       string    `json:"feedURL"`
+	CreatedAt     time.Time `json:"createdAt"`
+	LastFetchedAt time.Time `json:"lastFetchedAt"`
 }
 
 type PostResponse struct {

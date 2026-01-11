@@ -24,36 +24,55 @@ type application struct {
 func (app *application) routes() http.Handler {
 	r := chi.NewRouter()
 
+	// --- Global middleware --
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
+	// --- Health check ---
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("all good"))
 	})
 
-	//initialize jwt
+	// ------ Auth -----------
+	// --- Auth setup ---
 	jwtSVc := auth.NewJWTService(app.config.JWT)
-
-	//authentication
 	authService := auth.NewAuthService(repo.New(app.db), jwtSVc)
 	authHandler := auth.NewAuthHandler(authService)
+
+	// -- Auth routes ---
 	r.Post("/api/v1/register", authHandler.RegisterUser)
 	r.Post("/api/v1/login", authHandler.Authenticate)
 	r.Post("/api/v1/refresh", authHandler.RefreshToken)
 	r.Post("/api/v1/logout", authHandler.Logout)
 
-	// --- Feeds ---
+	// ------Feeds --------
+	// ---- Feed setup ----
 	fetcher := &feeds.FetcherService{
 		HttpClient: &http.Client{},
 	}
 	feedService := feeds.NewFeedService(repo.New(app.db), fetcher)
 	feedHandler := feeds.NewFeedHandler(feedService)
 
-	r.Post("/api/v1/createFeed", feedHandler.CreateFeed)
-	r.Get("/api/v1/feeds/{feedID}/posts", feedHandler.GetFeedPosts)
+	// Public feed routes
+	r.Route("/api/v1", func(r chi.Router) {
+		// create feed
+		r.Post("/createFeed", feedHandler.CreateFeed)
+
+		// feed posts
+		r.Get("/feeds/{feedID}/posts", feedHandler.GetFeedPosts)
+
+		// get feed by ID
+		r.Get("/feeds/{id}", feedHandler.GetFeedByID)
+
+		// get all feeds
+		r.Get("/feeds", feedHandler.GetAllFeeds)
+
+		// get feeds by userID
+		r.Get("/users/{userID}/feeds", feedHandler.GetFeedsByUserID)
+	})
 
 	//protected routes example)
 	r.Group(func(r chi.Router) {

@@ -9,6 +9,9 @@ import (
 
 const (
 	TypeInvalidRequest = "invalid_request"
+	TypeNotFound       = "not_found"
+	TypeConflict       = "conflict"
+	TypeUnauthorized   = "unauthorized"
 )
 
 type ApiError struct {
@@ -19,6 +22,7 @@ type ApiError struct {
 func (e ApiError) Error() string {
 	return e.Msg
 }
+
 func BadRequest(msg string) error {
 	return ApiError{
 		Type: TypeInvalidRequest,
@@ -26,8 +30,23 @@ func BadRequest(msg string) error {
 	}
 }
 
+func NotFound(msg string) error {
+	return ApiError{Type: TypeNotFound, Msg: msg}
+}
+
+func Conflict(msg string) error {
+	return ApiError{Type: TypeConflict, Msg: msg}
+}
+
+func Unauthorized(msg string) error {
+	return ApiError{Type: TypeUnauthorized, Msg: msg}
+}
+
 var typeToStatus = map[string]int{
 	TypeInvalidRequest: http.StatusUnprocessableEntity,
+	TypeNotFound:       http.StatusNotFound,
+	TypeConflict:       http.StatusConflict,
+	TypeUnauthorized:   http.StatusUnauthorized,
 }
 
 func RespondHTTPsError(w http.ResponseWriter, r *http.Request, err error) {

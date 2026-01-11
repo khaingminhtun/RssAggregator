@@ -13,10 +13,16 @@ type Querier interface {
 	CreatePost(ctx context.Context, arg CreatePostParams) (Post, error)
 	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (UserFeed, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	GetFeedByURL(ctx context.Context, url string) (Feed, error)
+	DeleteAllFeedsByUserID(ctx context.Context, userID int32) error
+	DeleteFeedByID(ctx context.Context, id int32) error
+	DeleteFeedIfUnused(ctx context.Context, id int32) error
+	GetAllFeeds(ctx context.Context) ([]Feed, error)
+	GetFeedByID(ctx context.Context, id int32) (Feed, error)
 	GetFeedURLByID(ctx context.Context, id int32) (string, error)
+	GetFeedsByUserID(ctx context.Context, userID int32) ([]Feed, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserById(ctx context.Context, id int32) (User, error)
+	UpdateFeed(ctx context.Context, arg UpdateFeedParams) (Feed, error)
 }
 
 var _ Querier = (*Queries)(nil)

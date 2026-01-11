@@ -12,66 +12,223 @@ import (
 )
 
 const createFeed = `-- name: CreateFeed :one
-INSERT INTO feeds (url, title, description, site_url)
+INSERT INTO feeds (feed_url, title, description, website_url)
 VALUES ($1, $2, $3, $4)
-RETURNING id, title, url, last_fetched_at, created_at, site_url, description
+RETURNING id, title, feed_url, last_fetched_at, created_at, website_url, description
 `
 
 type CreateFeedParams struct {
-	Url         string      `json:"url"`
+	FeedUrl     string      `json:"feed_url"`
 	Title       string      `json:"title"`
 	Description pgtype.Text `json:"description"`
-	SiteUrl     string      `json:"site_url"`
+	WebsiteUrl  string      `json:"website_url"`
 }
 
 func (q *Queries) CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, error) {
 	row := q.db.QueryRow(ctx, createFeed,
-		arg.Url,
+		arg.FeedUrl,
 		arg.Title,
 		arg.Description,
-		arg.SiteUrl,
+		arg.WebsiteUrl,
 	)
 	var i Feed
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
-		&i.Url,
+		&i.FeedUrl,
 		&i.LastFetchedAt,
 		&i.CreatedAt,
-		&i.SiteUrl,
+		&i.WebsiteUrl,
 		&i.Description,
 	)
 	return i, err
 }
 
-const getFeedByURL = `-- name: GetFeedByURL :one
-SELECT id, title, url, last_fetched_at, created_at, site_url, description FROM feeds WHERE url = $1
+const deleteAllFeedsByUserID = `-- name: DeleteAllFeedsByUserID :exec
+DELETE FROM feeds f
+USING user_feeds uf
+WHERE uf.feed_id = f.id
+  AND uf.user_id = $1
+  AND NOT EXISTS (
+      SELECT 1
+      FROM user_feeds uf2
+      WHERE uf2.feed_id = f.id
+        AND uf2.user_id <> $1
+  )
 `
 
-func (q *Queries) GetFeedByURL(ctx context.Context, url string) (Feed, error) {
-	row := q.db.QueryRow(ctx, getFeedByURL, url)
+func (q *Queries) DeleteAllFeedsByUserID(ctx context.Context, userID int32) error {
+	_, err := q.db.Exec(ctx, deleteAllFeedsByUserID, userID)
+	return err
+}
+
+const deleteFeedByID = `-- name: DeleteFeedByID :exec
+DELETE FROM feeds
+WHERE id = $1
+`
+
+func (q *Queries) DeleteFeedByID(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, deleteFeedByID, id)
+	return err
+}
+
+const deleteFeedIfUnused = `-- name: DeleteFeedIfUnused :exec
+DELETE FROM feeds f
+WHERE f.id = $1
+  AND NOT EXISTS (
+      SELECT 1
+      FROM user_feeds uf
+      WHERE uf.feed_id = f.id
+  )
+`
+
+func (q *Queries) DeleteFeedIfUnused(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, deleteFeedIfUnused, id)
+	return err
+}
+
+const getAllFeeds = `-- name: GetAllFeeds :many
+SELECT id, title, feed_url, last_fetched_at, created_at, website_url, description
+FROM feeds
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetAllFeeds(ctx context.Context) ([]Feed, error) {
+	rows, err := q.db.Query(ctx, getAllFeeds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Feed
+	for rows.Next() {
+		var i Feed
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.FeedUrl,
+			&i.LastFetchedAt,
+			&i.CreatedAt,
+			&i.WebsiteUrl,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFeedByID = `-- name: GetFeedByID :one
+SELECT id, title, feed_url, last_fetched_at, created_at, website_url, description
+FROM feeds
+WHERE id = $1
+`
+
+func (q *Queries) GetFeedByID(ctx context.Context, id int32) (Feed, error) {
+	row := q.db.QueryRow(ctx, getFeedByID, id)
 	var i Feed
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
-		&i.Url,
+		&i.FeedUrl,
 		&i.LastFetchedAt,
 		&i.CreatedAt,
-		&i.SiteUrl,
+		&i.WebsiteUrl,
 		&i.Description,
 	)
 	return i, err
 }
 
 const getFeedURLByID = `-- name: GetFeedURLByID :one
-SELECT url
+SELECT feed_url
 FROM feeds
 WHERE id = $1
 `
 
 func (q *Queries) GetFeedURLByID(ctx context.Context, id int32) (string, error) {
 	row := q.db.QueryRow(ctx, getFeedURLByID, id)
-	var url string
-	err := row.Scan(&url)
-	return url, err
+	var feed_url string
+	err := row.Scan(&feed_url)
+	return feed_url, err
+}
+
+const getFeedsByUserID = `-- name: GetFeedsByUserID :many
+SELECT f.id, f.title, f.feed_url, f.last_fetched_at, f.created_at, f.website_url, f.description
+FROM feeds f
+JOIN user_feeds uf ON uf.feed_id = f.id
+WHERE uf.user_id = $1
+ORDER BY uf.created_at DESC
+`
+
+func (q *Queries) GetFeedsByUserID(ctx context.Context, userID int32) ([]Feed, error) {
+	rows, err := q.db.Query(ctx, getFeedsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Feed
+	for rows.Next() {
+		var i Feed
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.FeedUrl,
+			&i.LastFetchedAt,
+			&i.CreatedAt,
+			&i.WebsiteUrl,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateFeed = `-- name: UpdateFeed :one
+UPDATE feeds
+SET title = $2,
+    feed_url = $3,
+    description = $4,
+    website_url = $5,
+    last_fetched_at = $6
+WHERE id = $1
+RETURNING id, title, feed_url, last_fetched_at, created_at, website_url, description
+`
+
+type UpdateFeedParams struct {
+	ID            int32              `json:"id"`
+	Title         string             `json:"title"`
+	FeedUrl       string             `json:"feed_url"`
+	Description   pgtype.Text        `json:"description"`
+	WebsiteUrl    string             `json:"website_url"`
+	LastFetchedAt pgtype.Timestamptz `json:"last_fetched_at"`
+}
+
+func (q *Queries) UpdateFeed(ctx context.Context, arg UpdateFeedParams) (Feed, error) {
+	row := q.db.QueryRow(ctx, updateFeed,
+		arg.ID,
+		arg.Title,
+		arg.FeedUrl,
+		arg.Description,
+		arg.WebsiteUrl,
+		arg.LastFetchedAt,
+	)
+	var i Feed
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.FeedUrl,
+		&i.LastFetchedAt,
+		&i.CreatedAt,
+		&i.WebsiteUrl,
+		&i.Description,
+	)
+	return i, err
 }

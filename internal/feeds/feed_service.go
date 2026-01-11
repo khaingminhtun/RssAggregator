@@ -8,23 +8,30 @@ import (
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
 	"github.com/khaingminhtun/rssagg/internal/errorHandle"
 	"github.com/khaingminhtun/rssagg/internal/log"
+	"github.com/khaingminhtun/rssagg/internal/posts"
 	"github.com/khaingminhtun/rssagg/internal/utils"
 )
 
 type FeedService interface {
 	CreateFeed(ctx context.Context, siteURL string) (*FeedResponse, error)
 	FetchFeedPosts(ctx context.Context, feedID int32) ([]PostResponse, error)
+
+	// Read
+	GetFeedByID(ctx context.Context, id int32) (*FeedResponse, error)
+	GetAllFeeds(ctx context.Context) ([]FeedResponse, error)
+	GetFeedsByUserID(ctx context.Context, userID int32) ([]FeedResponse, error)
 }
 
 type service struct {
-	repo    repo.Querier
-	fetcher *FetcherService
+	feedRepo FeedRepository
+	postRepo posts.PostRepository
+	fetcher  *FetcherService
 }
 
-func NewFeedService(repo repo.Querier, fetcher *FetcherService) FeedService {
+func NewFeedService(feedRepo FeedRepository, fetcher *FetcherService) FeedService {
 	return &service{
-		repo:    repo,
-		fetcher: fetcher,
+		feedRepo: feedRepo,
+		fetcher:  fetcher,
 	}
 }
 
@@ -32,14 +39,13 @@ func NewFeedService(repo repo.Querier, fetcher *FetcherService) FeedService {
 func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse, error) {
 	// 1. Validate input
 	if siteURL == "" {
-		return nil, errorHandle.ErrInvalidInput
+		return nil, errorHandle.BadRequest("site_url is required" + siteURL)
 	}
 
 	// 2. Validate URL
 	u, err := utils.ValidateURL(siteURL)
-
 	if err != nil {
-		return nil, errorHandle.ErrInvalidCredentials
+		return nil, errorHandle.BadRequest("invalid site_url" + siteURL)
 	}
 	log.Info("validated url", "url", u.String())
 
@@ -50,46 +56,52 @@ func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse
 	}
 	log.Info("discovered feed url", "feed_url", feedURL)
 
+	// 3a. Fetch and parse RSS feed to get title/description
+	parsedFeed, err := s.fetcher.FetchAndParse(feedURL)
+	if err != nil {
+		return nil, err
+	}
+
 	// 4. Save feed in DB
-	feed, err := s.repo.CreateFeed(ctx, repo.CreateFeedParams{
-		Url:         feedURL,
-		Title:       "ok",
-		Description: utils.Text("okay"),
-		SiteUrl:     siteURL,
+	feed, err := s.feedRepo.CreateFeed(ctx, repo.CreateFeedParams{
+		FeedUrl: feedURL,
+		Title:   parsedFeed.Title,
+		Description: pgtype.Text{
+			String: parsedFeed.Description,
+			Valid:  parsedFeed.Description != "",
+		},
+		WebsiteUrl: siteURL,
 	})
 	if err != nil {
-		if errorHandle.IsUniqueViolation(err) {
-			return nil, errorHandle.ErrUserAlreadyExists
-		}
-		return nil, errorHandle.ErrInternal
+		return nil, err
 	}
 
 	log.Info("feed created successfully", "feed_id", feed)
 
 	return &FeedResponse{
-		Title:   feed.Title,
-		SiteURL: feed.SiteUrl,
-		FeedURL: feed.Url,
+		Title:       feed.Title,
+		Description: feed.Description.String,
+		WebsiteUrl:  feed.WebsiteUrl,
+		FeedURL:     feed.FeedUrl,
 	}, nil
 }
 
 // fetch feeds
 func (s *service) FetchFeedPosts(ctx context.Context, feedID int32) ([]PostResponse, error) {
-	// 1. Get feed URL
-	feedURL, err := s.repo.GetFeedURLByID(ctx, feedID)
+
+	feedURL, err := s.feedRepo.GetFeedURLByID(ctx, feedID)
 	if err != nil {
-		return nil, errorHandle.ErrUserNotFound
+		return nil, errorHandle.NotFound("feedURL " + feedURL + " is not found")
 	}
 
-	// 2. Fetch & parse RSS
 	parsedFeed, err := s.fetcher.FetchAndParse(feedURL)
 	if err != nil {
-		return nil, errorHandle.ErrInternal
+		return nil, err
 	}
 
 	var responses []PostResponse
 
-	// 3. Iterate items
+	//  Iterate items
 	for _, item := range parsedFeed.Items {
 		if item.Link == "" {
 			continue
@@ -109,7 +121,7 @@ func (s *service) FetchFeedPosts(ctx context.Context, feedID int32) ([]PostRespo
 			guid = item.Link
 		}
 
-		post, err := s.repo.CreatePost(ctx, repo.CreatePostParams{
+		post, err := s.postRepo.CreatePost(ctx, repo.CreatePostParams{
 			FeedID: feedID,
 			Title:  item.Title,
 			Url:    item.Link,
@@ -128,11 +140,7 @@ func (s *service) FetchFeedPosts(ctx context.Context, feedID int32) ([]PostRespo
 		})
 
 		if err != nil {
-			if errorHandle.IsUniqueViolation(err) {
-				continue
-			}
-			log.Error("failed to insert post", "feed_id", feedID, "err", err)
-			continue
+			return nil, err
 		}
 
 		responses = append(responses, PostResponse{
@@ -148,4 +156,58 @@ func (s *service) FetchFeedPosts(ctx context.Context, feedID int32) ([]PostRespo
 	}
 
 	return responses, nil
+}
+
+// get feed by id
+func (s *service) GetFeedByID(ctx context.Context, id int32) (*FeedResponse, error) {
+	feed, err := s.feedRepo.GetFeedByID(ctx, id)
+	if err != nil {
+		log.Error("failed to get feed by id", "error", err)
+		return nil, errorHandle.NotFound("feed not found")
+	}
+
+	return mapFeedToResponse(feed), nil
+}
+
+// get all feeds
+func (s *service) GetAllFeeds(ctx context.Context) ([]FeedResponse, error) {
+
+	feeds, err := s.feedRepo.GetAllFeeds(ctx)
+	if err != nil {
+		log.Error("failed to get all feeds", "error", err)
+		return nil, err
+	}
+
+	return mapFeedsToResponses(feeds), nil
+}
+
+// get feed by userid
+func (s *service) GetFeedsByUserID(ctx context.Context, userID int32) ([]FeedResponse, error) {
+	feeds, err := s.feedRepo.GetFeedsByUserID(ctx, userID)
+	if err != nil {
+		log.Error("failed to get feeds by user id", "userID", userID, "error", err)
+		return nil, err
+	}
+
+	return mapFeedsToResponses(feeds), nil
+}
+
+// ----------------- Mapping helpers ----------------
+func mapFeedToResponse(feed repo.Feed) *FeedResponse {
+	return &FeedResponse{
+		ID:            feed.ID,
+		Title:         feed.Title,
+		WebsiteUrl:    feed.WebsiteUrl,
+		FeedURL:       feed.FeedUrl,
+		CreatedAt:     feed.CreatedAt.Time,
+		LastFetchedAt: feed.LastFetchedAt.Time,
+	}
+}
+
+func mapFeedsToResponses(feeds []repo.Feed) []FeedResponse {
+	result := make([]FeedResponse, 0, len(feeds))
+	for _, feed := range feeds {
+		result = append(result, *mapFeedToResponse(feed))
+	}
+	return result
 }

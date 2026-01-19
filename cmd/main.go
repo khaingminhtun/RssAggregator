@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/khaingminhtun/rssagg/internal/config"
-	"github.com/khaingminhtun/rssagg/internal/log"
+	"github.com/khaingminhtun/rssagg/internal/pkg/log"
 )
 
 func main() {
@@ -37,6 +37,9 @@ func main() {
 		config: *cfg,
 		db:     dbConn,
 	}
+
+	//--> start background tasks
+	app.setupBackgroundTasks()
 
 	//5. Set up routes
 	routes := app.routes()

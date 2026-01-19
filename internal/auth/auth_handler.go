@@ -3,8 +3,8 @@ package auth
 import (
 	"net/http"
 
-	"github.com/khaingminhtun/rssagg/internal/errorHandle"
-	"github.com/khaingminhtun/rssagg/internal/json"
+	"github.com/khaingminhtun/rssagg/internal/pkg/errorHandle"
+	"github.com/khaingminhtun/rssagg/internal/pkg/json"
 )
 
 type AuthHandler struct {

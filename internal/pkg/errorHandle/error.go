@@ -3,8 +3,8 @@ package errorHandle
 import (
 	"net/http"
 
-	"github.com/khaingminhtun/rssagg/internal/json"
-	"github.com/khaingminhtun/rssagg/internal/log"
+	"github.com/khaingminhtun/rssagg/internal/pkg/json"
+	"github.com/khaingminhtun/rssagg/internal/pkg/log"
 )
 
 const (

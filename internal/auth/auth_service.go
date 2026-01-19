@@ -5,9 +5,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
-	"github.com/khaingminhtun/rssagg/internal/errorHandle"
-	"github.com/khaingminhtun/rssagg/internal/log"
-	"github.com/khaingminhtun/rssagg/internal/utils"
+	"github.com/khaingminhtun/rssagg/internal/pkg/errorHandle"
+	"github.com/khaingminhtun/rssagg/internal/pkg/log"
+	"github.com/khaingminhtun/rssagg/internal/pkg/utils"
 )
 
 type AuthService interface {

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgconn"
-	"github.com/khaingminhtun/rssagg/internal/json"
+	"github.com/khaingminhtun/rssagg/internal/pkg/json"
 )
 
 var (

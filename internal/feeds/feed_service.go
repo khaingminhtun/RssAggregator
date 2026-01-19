@@ -2,19 +2,18 @@ package feeds
 
 import (
 	"context"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
-	"github.com/khaingminhtun/rssagg/internal/errorHandle"
-	"github.com/khaingminhtun/rssagg/internal/log"
+	"github.com/khaingminhtun/rssagg/internal/pkg/errorHandle"
+	"github.com/khaingminhtun/rssagg/internal/pkg/log"
+	"github.com/khaingminhtun/rssagg/internal/pkg/utils"
 	"github.com/khaingminhtun/rssagg/internal/posts"
-	"github.com/khaingminhtun/rssagg/internal/utils"
 )
 
 type FeedService interface {
 	CreateFeed(ctx context.Context, siteURL string) (*FeedResponse, error)
-	FetchFeedPosts(ctx context.Context, feedID int32) ([]PostResponse, error)
+	// FetchFeedPosts(ctx context.Context, feedID int32) ([]PostResponse, error)
 
 	// Read
 	GetFeedByID(ctx context.Context, id int32) (*FeedResponse, error)
@@ -28,9 +27,10 @@ type service struct {
 	fetcher  *FetcherService
 }
 
-func NewFeedService(feedRepo FeedRepository, fetcher *FetcherService) FeedService {
+func NewFeedService(feedRepo FeedRepository, postRepo posts.PostRepository, fetcher *FetcherService) FeedService {
 	return &service{
 		feedRepo: feedRepo,
+		postRepo: postRepo,
 		fetcher:  fetcher,
 	}
 }
@@ -87,76 +87,76 @@ func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse
 }
 
 // fetch feeds
-func (s *service) FetchFeedPosts(ctx context.Context, feedID int32) ([]PostResponse, error) {
+// func (s *service) FetchFeedPosts(ctx context.Context, feedID int32) ([]PostResponse, error) {
 
-	feedURL, err := s.feedRepo.GetFeedURLByID(ctx, feedID)
-	if err != nil {
-		return nil, errorHandle.NotFound("feedURL " + feedURL + " is not found")
-	}
+// 	feedURL, err := s.feedRepo.GetFeedURLByID(ctx, feedID)
+// 	if err != nil {
+// 		return nil, errorHandle.NotFound("feedURL " + feedURL + " is not found")
+// 	}
 
-	parsedFeed, err := s.fetcher.FetchAndParse(feedURL)
-	if err != nil {
-		return nil, err
-	}
+// 	parsedFeed, err := s.fetcher.FetchAndParse(feedURL)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	var responses []PostResponse
+// 	var responses []PostResponse
 
-	//  Iterate items
-	for _, item := range parsedFeed.Items {
-		if item.Link == "" {
-			continue
-		}
+// 	//  Iterate items
+// 	for _, item := range parsedFeed.Items {
+// 		if item.Link == "" {
+// 			continue
+// 		}
 
-		// Published date
-		var publishedAt time.Time
-		if item.PublishedParsed != nil {
-			publishedAt = *item.PublishedParsed
-		} else {
-			publishedAt = time.Now()
-		}
+// 		// Published date
+// 		var publishedAt time.Time
+// 		if item.PublishedParsed != nil {
+// 			publishedAt = *item.PublishedParsed
+// 		} else {
+// 			publishedAt = time.Now()
+// 		}
 
-		// GUID fallback
-		guid := item.GUID
-		if guid == "" {
-			guid = item.Link
-		}
+// 		// GUID fallback
+// 		guid := item.GUID
+// 		if guid == "" {
+// 			guid = item.Link
+// 		}
 
-		post, err := s.postRepo.CreatePost(ctx, repo.CreatePostParams{
-			FeedID: feedID,
-			Title:  item.Title,
-			Url:    item.Link,
-			Description: pgtype.Text{
-				String: item.Description,
-				Valid:  item.Description != "",
-			},
-			PublishedAt: pgtype.Timestamptz{
-				Time:  publishedAt,
-				Valid: true,
-			},
-			Guid: pgtype.Text{
-				String: guid,
-				Valid:  true,
-			},
-		})
+// 		post, err := s.postRepo.CreatePost(ctx, repo.CreatePostParams{
+// 			FeedID: feedID,
+// 			Title:  item.Title,
+// 			Url:    item.Link,
+// 			Description: pgtype.Text{
+// 				String: item.Description,
+// 				Valid:  item.Description != "",
+// 			},
+// 			PublishedAt: pgtype.Timestamptz{
+// 				Time:  publishedAt,
+// 				Valid: true,
+// 			},
+// 			Guid: pgtype.Text{
+// 				String: guid,
+// 				Valid:  true,
+// 			},
+// 		})
 
-		if err != nil {
-			return nil, err
-		}
+// 		if err != nil {
+// 			return nil, err
+// 		}
 
-		responses = append(responses, PostResponse{
-			ID:          post.ID,
-			FeedID:      post.FeedID,
-			Title:       post.Title,
-			URL:         post.Url,
-			Description: post.Description.String,
-			PublishedAt: post.PublishedAt.Time,
-			Guid:        post.Guid.String,
-			CreatedAt:   post.CreatedAt.Time,
-		})
-	}
+// 		responses = append(responses, PostResponse{
+// 			ID:          post.ID,
+// 			FeedID:      post.FeedID,
+// 			Title:       post.Title,
+// 			URL:         post.Url,
+// 			Description: post.Description.String,
+// 			PublishedAt: post.PublishedAt.Time,
+// 			Guid:        post.Guid.String,
+// 			CreatedAt:   post.CreatedAt.Time,
+// 		})
+// 	}
 
-	return responses, nil
-}
+// 	return responses, nil
+// }
 
 // get feed by id
 func (s *service) GetFeedByID(ctx context.Context, id int32) (*FeedResponse, error) {

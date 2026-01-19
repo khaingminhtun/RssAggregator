@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/khaingminhtun/rssagg/internal/utils"
+	"github.com/khaingminhtun/rssagg/internal/pkg/utils"
 	"github.com/mmcdole/gofeed"
 	"golang.org/x/net/html"
 )

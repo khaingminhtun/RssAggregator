@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/khaingminhtun/rssagg/internal/errorHandle"
+	"github.com/khaingminhtun/rssagg/internal/pkg/errorHandle"
 )
 
 type contextKey string

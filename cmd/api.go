@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 	"github.com/khaingminhtun/rssagg/internal/auth"
 	"github.com/khaingminhtun/rssagg/internal/config"
 	"github.com/khaingminhtun/rssagg/internal/feeds"
+	"github.com/khaingminhtun/rssagg/internal/mechanism"
+	"github.com/khaingminhtun/rssagg/internal/posts"
 )
 
 type application struct {
@@ -53,7 +56,12 @@ func (app *application) routes() http.Handler {
 	fetcher := &feeds.FetcherService{
 		HttpClient: &http.Client{},
 	}
-	feedService := feeds.NewFeedService(repo.New(app.db), fetcher)
+	// repositories
+	feedRepo := feeds.NewFeedRepository(app.db)
+	postRepo := posts.NewPostRepository(app.db)
+	// services and handlers
+
+	feedService := feeds.NewFeedService(feedRepo, postRepo, fetcher)
 	feedHandler := feeds.NewFeedHandler(feedService)
 
 	// Public feed routes
@@ -62,7 +70,7 @@ func (app *application) routes() http.Handler {
 		r.Post("/createFeed", feedHandler.CreateFeed)
 
 		// feed posts
-		r.Get("/feeds/{feedID}/posts", feedHandler.GetFeedPosts)
+		// r.Get("/feeds/{feedID}/posts", feedHandler.GetFeedPosts)
 
 		// get feed by ID
 		r.Get("/feeds/{id}", feedHandler.GetFeedByID)
@@ -83,6 +91,35 @@ func (app *application) routes() http.Handler {
 		})
 	})
 	return r
+}
+
+// run background tasks
+func (app *application) setupBackgroundTasks() *mechanism.FeedQueue {
+	// --- Repositories ---
+	feedRepo := feeds.NewFeedRepository(app.db)
+	postRepo := posts.NewPostRepository(app.db)
+
+	// --- Fetcher service ---
+	fetcher := &feeds.FetcherService{
+		HttpClient: &http.Client{},
+	}
+
+	// --- Feed processor ---
+	processor := mechanism.NewFeedProcessorService(fetcher, postRepo, feedRepo)
+
+	// --- Queue ---
+	queue := mechanism.NewFeedQueue(100) // buffer size 100
+
+	// --- Workers ---
+	worker := mechanism.NewFeedWorker(processor, queue)
+	ctx := context.Background()
+	worker.Start(ctx, 5) // 5 concurrent workers
+
+	// --- Scheduler ---
+	scheduler := mechanism.NewFeedScheduler(feedRepo, queue, 5*time.Second)
+	go scheduler.Start(ctx)
+
+	return queue
 }
 
 func (app *application) run(h http.Handler) error {

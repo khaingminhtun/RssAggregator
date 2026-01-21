@@ -12,18 +12,10 @@ import (
 )
 
 const createPost = `-- name: CreatePost :one
-INSERT INTO posts (
-    feed_id,
-    title,
-    url,
-    description,
-    published_at,
-    guid
-)
-VALUES (
-    $1, $2, $3, $4, $5, $6
-)
-ON CONFLICT (feed_id, url) DO NOTHING
+INSERT INTO posts (feed_id, title, url, description, published_at, guid)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (feed_id, url) DO UPDATE
+    SET title = EXCLUDED.title
 RETURNING id, feed_id, title, url, description, published_at, guid, created_at
 `
 
@@ -57,4 +49,47 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getAllPosts = `-- name: GetAllPosts :many
+SELECT
+    id,
+    feed_id,
+    title,
+    url,
+    description,
+    published_at,
+    guid,
+    created_at
+FROM posts
+ORDER BY published_at DESC
+`
+
+func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
+	rows, err := q.db.Query(ctx, getAllPosts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Post
+	for rows.Next() {
+		var i Post
+		if err := rows.Scan(
+			&i.ID,
+			&i.FeedID,
+			&i.Title,
+			&i.Url,
+			&i.Description,
+			&i.PublishedAt,
+			&i.Guid,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

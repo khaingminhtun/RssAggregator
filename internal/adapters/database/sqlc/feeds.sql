@@ -35,6 +35,13 @@ SET title = $2,
 WHERE id = $1
 RETURNING *;
 
+-- name: UpdateFeedFetchTime :one
+UPDATE feeds
+SET last_fetched_at = $2
+WHERE id = $1
+RETURNING *;
+
+
 -- name: DeleteFeedByID :exec
 DELETE FROM feeds
 WHERE id = $1;

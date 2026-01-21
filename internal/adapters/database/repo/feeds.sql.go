@@ -232,3 +232,30 @@ func (q *Queries) UpdateFeed(ctx context.Context, arg UpdateFeedParams) (Feed, e
 	)
 	return i, err
 }
+
+const updateFeedFetchTime = `-- name: UpdateFeedFetchTime :one
+UPDATE feeds
+SET last_fetched_at = $2
+WHERE id = $1
+RETURNING id, title, feed_url, last_fetched_at, created_at, website_url, description
+`
+
+type UpdateFeedFetchTimeParams struct {
+	ID            int32              `json:"id"`
+	LastFetchedAt pgtype.Timestamptz `json:"last_fetched_at"`
+}
+
+func (q *Queries) UpdateFeedFetchTime(ctx context.Context, arg UpdateFeedFetchTimeParams) (Feed, error) {
+	row := q.db.QueryRow(ctx, updateFeedFetchTime, arg.ID, arg.LastFetchedAt)
+	var i Feed
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.FeedUrl,
+		&i.LastFetchedAt,
+		&i.CreatedAt,
+		&i.WebsiteUrl,
+		&i.Description,
+	)
+	return i, err
+}

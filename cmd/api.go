@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
 	"github.com/khaingminhtun/rssagg/internal/auth"
 	"github.com/khaingminhtun/rssagg/internal/config"
@@ -20,7 +20,7 @@ import (
 
 type application struct {
 	config config.Config
-	db     *pgx.Conn
+	db     *pgxpool.Pool
 }
 
 // routes sets up the application routes and middleware
@@ -60,9 +60,14 @@ func (app *application) routes() http.Handler {
 	feedRepo := feeds.NewFeedRepository(app.db)
 	postRepo := posts.NewPostRepository(app.db)
 	// services and handlers
-
 	feedService := feeds.NewFeedService(feedRepo, postRepo, fetcher)
 	feedHandler := feeds.NewFeedHandler(feedService)
+
+	// ----- Posts -----
+	// ------ Posts setup ----
+
+	postService := posts.NewPostService(postRepo)
+	postHandler := posts.NewPostHandler(postService)
 
 	// Public feed routes
 	r.Route("/api/v1", func(r chi.Router) {
@@ -80,6 +85,9 @@ func (app *application) routes() http.Handler {
 
 		// get feeds by userID
 		r.Get("/users/{userID}/feeds", feedHandler.GetFeedsByUserID)
+
+		// get all posts
+		r.Get("/posts", postHandler.GetAllPosts)
 	})
 
 	//protected routes example)
@@ -95,6 +103,8 @@ func (app *application) routes() http.Handler {
 
 // run background tasks
 func (app *application) setupBackgroundTasks() *mechanism.FeedQueue {
+	log.Println("[BACKGROUND] Initializing background feed processing")
+
 	// --- Repositories ---
 	feedRepo := feeds.NewFeedRepository(app.db)
 	postRepo := posts.NewPostRepository(app.db)
@@ -108,16 +118,21 @@ func (app *application) setupBackgroundTasks() *mechanism.FeedQueue {
 	processor := mechanism.NewFeedProcessorService(fetcher, postRepo, feedRepo)
 
 	// --- Queue ---
-	queue := mechanism.NewFeedQueue(100) // buffer size 100
+	queue := mechanism.NewFeedQueue(100)
+	log.Println("[BACKGROUND] Feed queue initialized (size=100)")
 
 	// --- Workers ---
 	worker := mechanism.NewFeedWorker(processor, queue)
 	ctx := context.Background()
-	worker.Start(ctx, 5) // 5 concurrent workers
+	worker.Start(ctx, 5)
+	log.Println("[BACKGROUND] Feed workers started (count=5)")
 
 	// --- Scheduler ---
 	scheduler := mechanism.NewFeedScheduler(feedRepo, queue, 5*time.Second)
 	go scheduler.Start(ctx)
+	log.Println("[BACKGROUND] Feed scheduler started (interval=5s)")
+
+	log.Println("[BACKGROUND] Background feed system is running")
 
 	return queue
 }

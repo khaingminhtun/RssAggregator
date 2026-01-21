@@ -6,7 +6,7 @@ import (
 
 	"os"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/khaingminhtun/rssagg/internal/config"
 	"github.com/khaingminhtun/rssagg/internal/pkg/log"
 )
@@ -24,18 +24,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	//3. connect to database
-	dbConn, err := pgx.Connect(ctx, cfg.DB.DSN)
+	// 3. connect to database using pgxpool
+	dbPool, err := pgxpool.New(ctx, cfg.DB.DSN)
 	if err != nil {
 		log.Error("unable to connect to database", "error", err)
 		os.Exit(1)
 	}
-	defer dbConn.Close(ctx)
+	defer dbPool.Close() // pool closes all connections on defer
+
+	// Optional: test connection
+	err = dbPool.Ping(ctx)
+	if err != nil {
+		log.Error("database ping failed", "error", err)
+		os.Exit(1)
+	}
 
 	//4. Initialize application struct
 	app := &application{
 		config: *cfg,
-		db:     dbConn,
+		db:     dbPool,
 	}
 
 	//--> start background tasks

@@ -39,6 +39,11 @@ func NewFeedProcessorService(fetcher *feeds.FetcherService, postRepo posts.PostR
 // Process a feed
 // ----------------------------
 func (s *FeedProcessorService) ProcessFeed(ctx context.Context, feed repo.Feed) error {
+	if feed.FeedUrl == "" {
+    log.Printf("[Processor] Skipping feed %d: empty FeedUrl", feed.ID)
+    return nil
+}
+
 	parsedFeed, err := s.fetcher.FetchAndParse(feed.FeedUrl)
 	if err != nil {
 		return err

@@ -3,6 +3,7 @@ package feeds
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
 )
 
@@ -19,6 +20,8 @@ type FeedRepository interface {
 
 	// Update
 	UpdateFeed(ctx context.Context, arg repo.UpdateFeedParams) (repo.Feed, error)
+	// Update only last fetched timestamp
+	UpdateFeedFetchTime(ctx context.Context, id int32, lastFetchedAt pgtype.Timestamptz) (repo.Feed, error)
 
 	// Delete
 	DeleteFeedByID(ctx context.Context, id int32) error
@@ -61,6 +64,13 @@ func (r *feedRepo) GetFeedURLByID(ctx context.Context, id int32) (string, error)
 
 func (r *feedRepo) UpdateFeed(ctx context.Context, arg repo.UpdateFeedParams) (repo.Feed, error) {
 	return r.q.UpdateFeed(ctx, arg)
+}
+
+func (r *feedRepo) UpdateFeedFetchTime(ctx context.Context, id int32, lastFetchedAt pgtype.Timestamptz) (repo.Feed, error) {
+	return r.q.UpdateFeedFetchTime(ctx, repo.UpdateFeedFetchTimeParams{
+		ID:            id,
+		LastFetchedAt: lastFetchedAt,
+	})
 }
 
 func (r *feedRepo) DeleteFeedByID(ctx context.Context, id int32) error {

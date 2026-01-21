@@ -17,12 +17,14 @@ type Querier interface {
 	DeleteFeedByID(ctx context.Context, id int32) error
 	DeleteFeedIfUnused(ctx context.Context, id int32) error
 	GetAllFeeds(ctx context.Context) ([]Feed, error)
+	GetAllPosts(ctx context.Context) ([]Post, error)
 	GetFeedByID(ctx context.Context, id int32) (Feed, error)
 	GetFeedURLByID(ctx context.Context, id int32) (string, error)
 	GetFeedsByUserID(ctx context.Context, userID int32) ([]Feed, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserById(ctx context.Context, id int32) (User, error)
 	UpdateFeed(ctx context.Context, arg UpdateFeedParams) (Feed, error)
+	UpdateFeedFetchTime(ctx context.Context, arg UpdateFeedFetchTimeParams) (Feed, error)
 }
 
 var _ Querier = (*Queries)(nil)

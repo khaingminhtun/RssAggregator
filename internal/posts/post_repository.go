@@ -8,6 +8,7 @@ import (
 
 type PostRepository interface {
 	CreatePost(ctx context.Context, arg repo.CreatePostParams) (repo.Post, error)
+	GetAllPosts(ctx context.Context) ([]repo.Post, error)
 }
 
 // --- Concrete SQLC-backed implementation --- //
@@ -25,4 +26,9 @@ func NewPostRepository(db repo.DBTX) PostRepository {
 
 func (r *postRepo) CreatePost(ctx context.Context, arg repo.CreatePostParams) (repo.Post, error) {
 	return r.q.CreatePost(ctx, arg)
+}
+
+// get all posts
+func (r *postRepo) GetAllPosts(ctx context.Context) ([]repo.Post, error) {
+	return r.q.GetAllPosts(ctx)
 }

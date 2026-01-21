@@ -51,17 +51,12 @@ func (w *FeedWorker) handle(feed repo.Feed, workerID int) {
 		log.Printf("[Worker %d] Failed to process feed %d: %v", workerID, feed.ID, err)
 	}
 
-	// Update the feed fetch result in DB
-	_, updateErr := w.svc.feedRepo.UpdateFeed(ctx, repo.UpdateFeedParams{
-		ID: feed.ID,
-		LastFetchedAt: pgtype.Timestamptz{
-			Time:  time.Now(),
-			Valid: true,
-		},
+	// Update only last fetched timestamp
+	_, updateErr := w.svc.feedRepo.UpdateFeedFetchTime(ctx, feed.ID, pgtype.Timestamptz{
+		Time:  time.Now(),
+		Valid: true,
 	})
-
 	if updateErr != nil {
-		// optional logging
-		log.Printf("[Worker %d] Failed to update fetch result for feed %d: %v", workerID, feed.ID, updateErr)
+		log.Printf("[Worker %d] Failed to update last_fetched_at for feed %d: %v", workerID, feed.ID, updateErr)
 	}
 }

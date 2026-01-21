@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -17,10 +18,22 @@ type Config struct {
 }
 
 type DBconfig struct {
-	DSN          string `env:"DB_DSN,required"`
+	User         string `env:"POSTGRES_USER,required"`
+	Password     string `env:"POSTGRES_PASSWORD,required"`
+	Host         string `env:"POSTGRES_HOST" envDefault:"localhost"`
+	Port         string `env:"POSTGRES_PORT" envDefault:"5432"`
+	Name         string `env:"POSTGRES_DB,required"`
 	MaxOpenConns int    `env:"DB_MAX_OPEN_CONNS" envDefault:"25"`
 	MaxIdleConns int    `env:"DB_MAX_IDLE_CONNS" envDefault:"25"`
 }
+
+func (d *DBconfig) DSN() string {
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		d.User, d.Password, d.Host, d.Port, d.Name,
+	)
+}
+
 
 type RedisConfig struct {
 	// Redis related configurations
@@ -44,7 +57,10 @@ type OAuthConfig struct {
 // you can add more configuration fields as needed
 func LoadConfig() (*Config, error) {
 	// Load configuration from file, environment variables, etc.
-	_ = godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("No .env file found, relying on environment variables")
+	}
 
 	cfg := &Config{}
 

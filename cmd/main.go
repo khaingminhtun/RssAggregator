@@ -25,7 +25,7 @@ func main() {
 	}
 
 	// 3. connect to database using pgxpool
-	dbPool, err := pgxpool.New(ctx, cfg.DB.DSN)
+	dbPool, err := pgxpool.New(ctx, cfg.DB.DSN())
 	if err != nil {
 		log.Error("unable to connect to database", "error", err)
 		os.Exit(1)

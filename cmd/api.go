@@ -86,8 +86,16 @@ func (app *application) routes() http.Handler {
 		// get feeds by userID
 		r.Get("/users/{userID}/feeds", feedHandler.GetFeedsByUserID)
 
+		// update feeds by feedid
+		r.Patch("/feeds/{id}", feedHandler.UpdateFeed)
+
+		r.Delete("/feeds/{id}", feedHandler.DeleteFeedByID)
+		r.Delete("/feeds/{id}/unused", feedHandler.DeleteFeedIfUnused)
+		r.Delete("/users/{user_id}/feeds", feedHandler.DeleteAllFeedsByUserID)
+
 		// get all posts
 		r.Get("/posts", postHandler.GetAllPosts)
+
 	})
 
 	//protected routes example)

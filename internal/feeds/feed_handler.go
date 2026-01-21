@@ -117,3 +117,90 @@ func (h *FeedHandler) GetFeedsByUserID(w http.ResponseWriter, r *http.Request) {
 
 	json.RespondJSON(w, http.StatusOK, "feeds fetched successfully for user", feeds)
 }
+
+// Update /feeds/{id} - update feed
+// update feed
+func (h *FeedHandler) UpdateFeed(w http.ResponseWriter, r *http.Request) {
+	var req RequestSiteURL
+
+	// 1. Decode request body
+	if !json.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	// 2. Get feed ID from URL
+	idParam := chi.URLParam(r, "id")
+	feedID, err := strconv.Atoi(idParam)
+	if err != nil || feedID <= 0 {
+		errorHandle.RespondHTTPError(w, errorHandle.BadRequest("invalid feed id"))
+		return
+	}
+
+	// 3. Call service
+	feed, err := h.FeedService.UpdateFeed(
+		r.Context(),
+		int32(feedID),
+		req.SiteURL,
+	)
+	if err != nil {
+		errorHandle.RespondHTTPError(w, err)
+		return
+	}
+
+	// 4. Respond
+	json.RespondJSON(w, http.StatusOK, "feed updated successfully", feed)
+}
+
+// DELETE /feeds/{id}
+func (h *FeedHandler) DeleteFeedByID(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+	feedID, err := strconv.Atoi(idParam)
+	if err != nil || feedID <= 0 {
+		errorHandle.RespondHTTPError(w, errorHandle.BadRequest("invalid feed id"))
+		return
+	}
+
+	err = h.FeedService.DeleteFeedByID(r.Context(), int32(feedID))
+	if err != nil {
+		errorHandle.RespondHTTPError(w, err)
+		return
+	}
+
+	json.RespondJSON(w, http.StatusOK, "feed deleted successfully", nil)
+}
+
+// DELETE /feeds/{id}/unused
+func (h *FeedHandler) DeleteFeedIfUnused(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+	feedID, err := strconv.Atoi(idParam)
+	if err != nil || feedID <= 0 {
+		errorHandle.RespondHTTPError(w, errorHandle.BadRequest("invalid feed id"))
+		return
+	}
+
+	err = h.FeedService.DeleteFeedIfUnused(r.Context(), int32(feedID))
+	if err != nil {
+		errorHandle.RespondHTTPError(w, err)
+		return
+	}
+
+	json.RespondJSON(w, http.StatusOK, "unused feed deleted successfully", nil)
+}
+
+// DELETE /users/{user_id}/feeds
+func (h *FeedHandler) DeleteAllFeedsByUserID(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "user_id")
+	userID, err := strconv.Atoi(idParam)
+	if err != nil || userID <= 0 {
+		errorHandle.RespondHTTPError(w, errorHandle.BadRequest("invalid user id"))
+		return
+	}
+
+	err = h.FeedService.DeleteAllFeedsByUserID(r.Context(), int32(userID))
+	if err != nil {
+		errorHandle.RespondHTTPError(w, err)
+		return
+	}
+
+	json.RespondJSON(w, http.StatusOK, "all feeds deleted successfully", nil)
+}

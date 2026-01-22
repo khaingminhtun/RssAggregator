@@ -72,10 +72,7 @@ func (s *FeedProcessorService) ProcessFeed(ctx context.Context, feed repo.Feed) 
 				String: item.Description,
 				Valid:  item.Description != "",
 			},
-			PublishedAt: pgtype.Timestamptz{
-				Time:  publishedAt,
-				Valid: true,
-			},
+			PublishedAt: publishedAt,
 			Guid: pgtype.Text{
 				String: guid,
 				Valid:  true,

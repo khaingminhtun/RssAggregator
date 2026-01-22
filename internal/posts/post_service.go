@@ -37,14 +37,16 @@ func (s *service) GetAllPosts(ctx context.Context) ([]PostResponse, error) {
 }
 
 func mapPostToResponse(post repo.Post) PostResponse {
+	const layout = "2006-01-02 15:04:05" // custom format
+
 	return PostResponse{
 		ID:          post.ID,
 		FeedID:      post.FeedID,
 		Title:       post.Title,
 		URL:         post.Url,
 		Description: post.Description.String,
-		PublishedAt: post.PublishedAt.Time,
+		PublishedAt: post.PublishedAt.Format(layout),
 		Guid:        post.Guid.String,
-		CreatedAt:   post.CreatedAt.Time,
+		CreatedAt:   post.CreatedAt.Format(layout),
 	}
 }

@@ -5,6 +5,8 @@
 package repo
 
 import (
+	"time"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -13,35 +15,35 @@ type Feed struct {
 	Title         string             `json:"title"`
 	FeedUrl       string             `json:"feed_url"`
 	LastFetchedAt pgtype.Timestamptz `json:"last_fetched_at"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	CreatedAt     time.Time          `json:"created_at"`
 	WebsiteUrl    string             `json:"website_url"`
 	Description   pgtype.Text        `json:"description"`
 }
 
 type Post struct {
-	ID          int32              `json:"id"`
-	FeedID      int32              `json:"feed_id"`
-	Title       string             `json:"title"`
-	Url         string             `json:"url"`
-	Description pgtype.Text        `json:"description"`
-	PublishedAt pgtype.Timestamptz `json:"published_at"`
-	Guid        pgtype.Text        `json:"guid"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ID          int32       `json:"id"`
+	FeedID      int32       `json:"feed_id"`
+	Title       string      `json:"title"`
+	Url         string      `json:"url"`
+	Description pgtype.Text `json:"description"`
+	PublishedAt time.Time   `json:"published_at"`
+	Guid        pgtype.Text `json:"guid"`
+	CreatedAt   time.Time   `json:"created_at"`
 }
 
 type User struct {
-	ID           int32              `json:"id"`
-	Name         string             `json:"name"`
-	Email        string             `json:"email"`
-	PasswordHash string             `json:"password_hash"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	AuthType     pgtype.Text        `json:"auth_type"`
+	ID           int32       `json:"id"`
+	Name         string      `json:"name"`
+	Email        string      `json:"email"`
+	PasswordHash string      `json:"password_hash"`
+	CreatedAt    time.Time   `json:"created_at"`
+	UpdatedAt    time.Time   `json:"updated_at"`
+	AuthType     pgtype.Text `json:"auth_type"`
 }
 
 type UserFeed struct {
-	ID        int32              `json:"id"`
-	UserID    int32              `json:"user_id"`
-	FeedID    int32              `json:"feed_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID        int32     `json:"id"`
+	UserID    int32     `json:"user_id"`
+	FeedID    int32     `json:"feed_id"`
+	CreatedAt time.Time `json:"created_at"`
 }

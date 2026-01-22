@@ -262,13 +262,15 @@ func (s *service) DeleteAllFeedsByUserID(ctx context.Context, userID int32) erro
 
 // ----------------- Mapping helpers ----------------
 func mapFeedToResponse(feed repo.Feed) *FeedResponse {
+
+	const layout = "2006-01-02 15:04:05" // custom format
 	return &FeedResponse{
 		ID:            feed.ID,
 		Title:         feed.Title,
 		WebsiteUrl:    feed.WebsiteUrl,
 		FeedURL:       feed.FeedUrl,
-		CreatedAt:     feed.CreatedAt.Time,
-		LastFetchedAt: feed.LastFetchedAt.Time,
+		CreatedAt:     feed.CreatedAt.Format(layout),
+		LastFetchedAt: feed.LastFetchedAt.Time.Format(layout),
 	}
 }
 

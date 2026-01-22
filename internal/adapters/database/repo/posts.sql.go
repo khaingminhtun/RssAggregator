@@ -7,6 +7,7 @@ package repo
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -20,12 +21,12 @@ RETURNING id, feed_id, title, url, description, published_at, guid, created_at
 `
 
 type CreatePostParams struct {
-	FeedID      int32              `json:"feed_id"`
-	Title       string             `json:"title"`
-	Url         string             `json:"url"`
-	Description pgtype.Text        `json:"description"`
-	PublishedAt pgtype.Timestamptz `json:"published_at"`
-	Guid        pgtype.Text        `json:"guid"`
+	FeedID      int32       `json:"feed_id"`
+	Title       string      `json:"title"`
+	Url         string      `json:"url"`
+	Description pgtype.Text `json:"description"`
+	PublishedAt time.Time   `json:"published_at"`
+	Guid        pgtype.Text `json:"guid"`
 }
 
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {

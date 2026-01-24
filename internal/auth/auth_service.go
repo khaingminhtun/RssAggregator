@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
 	"github.com/khaingminhtun/rssagg/internal/pkg/errorHandle"
 	"github.com/khaingminhtun/rssagg/internal/pkg/log"
@@ -44,10 +43,7 @@ func (s *service) RegisterUser(ctx context.Context, request RegisterRequest) err
 		Name:         request.Name,
 		Email:        request.Email,
 		PasswordHash: hashedPassword,
-		AuthType: pgtype.Text{
-			String: string(AuthTypeLocal),
-			Valid:  true,
-		},
+		AuthType:     string(AuthTypeLocal),
 	})
 
 	if err != nil {

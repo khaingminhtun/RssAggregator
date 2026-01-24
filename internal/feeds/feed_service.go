@@ -91,12 +91,16 @@ func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse
 
 	log.Info("feed created successfully", "feed_id", feed)
 
+	const layout = "2006-01-02 15:04:05"
+
 	return &FeedResponse{
-		ID:          feed.ID,
-		Title:       feed.Title,
-		Description: feed.Description.String,
-		WebsiteUrl:  feed.WebsiteUrl,
-		FeedURL:     feed.FeedUrl,
+		ID:            feed.ID,
+		Title:         feed.Title,
+		Description:   feed.Description.String,
+		WebsiteUrl:    feed.WebsiteUrl,
+		FeedURL:       feed.FeedUrl,
+		CreatedAt:     feed.CreatedAt.Format(layout),
+		LastFetchedAt: feed.CreatedAt.Format(layout),
 	}, nil
 }
 

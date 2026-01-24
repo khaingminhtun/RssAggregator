@@ -20,7 +20,7 @@ func ToUserDTO(user repo.User) UserDTO {
 		ID:       user.ID,
 		Name:     user.Name,
 		Email:    user.Email,
-		AuthType: user.AuthType.String,
+		AuthType: user.AuthType,
 		// Convert pgtype.Timestamptz to a clean string or time.Time
 		CreatedAt: user.CreatedAt.Format(layout),
 		UpdatedAt: user.UpdatedAt.Format(layout),

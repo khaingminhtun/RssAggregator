@@ -14,7 +14,7 @@ import (
 const createFeed = `-- name: CreateFeed :one
 INSERT INTO feeds (feed_url, title, description, website_url)
 VALUES ($1, $2, $3, $4)
-RETURNING id, title, feed_url, last_fetched_at, created_at, website_url, description
+RETURNING id, title, feed_url, website_url, description, last_fetched_at, created_at
 `
 
 type CreateFeedParams struct {
@@ -36,10 +36,10 @@ func (q *Queries) CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, e
 		&i.ID,
 		&i.Title,
 		&i.FeedUrl,
-		&i.LastFetchedAt,
-		&i.CreatedAt,
 		&i.WebsiteUrl,
 		&i.Description,
+		&i.LastFetchedAt,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -88,7 +88,7 @@ func (q *Queries) DeleteFeedIfUnused(ctx context.Context, id int32) error {
 }
 
 const getAllFeeds = `-- name: GetAllFeeds :many
-SELECT id, title, feed_url, last_fetched_at, created_at, website_url, description
+SELECT id, title, feed_url, website_url, description, last_fetched_at, created_at
 FROM feeds
 ORDER BY created_at DESC
 `
@@ -106,10 +106,10 @@ func (q *Queries) GetAllFeeds(ctx context.Context) ([]Feed, error) {
 			&i.ID,
 			&i.Title,
 			&i.FeedUrl,
-			&i.LastFetchedAt,
-			&i.CreatedAt,
 			&i.WebsiteUrl,
 			&i.Description,
+			&i.LastFetchedAt,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -122,7 +122,7 @@ func (q *Queries) GetAllFeeds(ctx context.Context) ([]Feed, error) {
 }
 
 const getFeedByID = `-- name: GetFeedByID :one
-SELECT id, title, feed_url, last_fetched_at, created_at, website_url, description
+SELECT id, title, feed_url, website_url, description, last_fetched_at, created_at
 FROM feeds
 WHERE id = $1
 `
@@ -134,10 +134,10 @@ func (q *Queries) GetFeedByID(ctx context.Context, id int32) (Feed, error) {
 		&i.ID,
 		&i.Title,
 		&i.FeedUrl,
-		&i.LastFetchedAt,
-		&i.CreatedAt,
 		&i.WebsiteUrl,
 		&i.Description,
+		&i.LastFetchedAt,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -156,7 +156,7 @@ func (q *Queries) GetFeedURLByID(ctx context.Context, id int32) (string, error) 
 }
 
 const getFeedsByUserID = `-- name: GetFeedsByUserID :many
-SELECT f.id, f.title, f.feed_url, f.last_fetched_at, f.created_at, f.website_url, f.description
+SELECT f.id, f.title, f.feed_url, f.website_url, f.description, f.last_fetched_at, f.created_at
 FROM feeds f
 JOIN user_feeds uf ON uf.feed_id = f.id
 WHERE uf.user_id = $1
@@ -176,10 +176,10 @@ func (q *Queries) GetFeedsByUserID(ctx context.Context, userID int32) ([]Feed, e
 			&i.ID,
 			&i.Title,
 			&i.FeedUrl,
-			&i.LastFetchedAt,
-			&i.CreatedAt,
 			&i.WebsiteUrl,
 			&i.Description,
+			&i.LastFetchedAt,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -199,7 +199,7 @@ SET title = $2,
     website_url = $5,
     last_fetched_at = $6
 WHERE id = $1
-RETURNING id, title, feed_url, last_fetched_at, created_at, website_url, description
+RETURNING id, title, feed_url, website_url, description, last_fetched_at, created_at
 `
 
 type UpdateFeedParams struct {
@@ -225,10 +225,10 @@ func (q *Queries) UpdateFeed(ctx context.Context, arg UpdateFeedParams) (Feed, e
 		&i.ID,
 		&i.Title,
 		&i.FeedUrl,
-		&i.LastFetchedAt,
-		&i.CreatedAt,
 		&i.WebsiteUrl,
 		&i.Description,
+		&i.LastFetchedAt,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -237,7 +237,7 @@ const updateFeedFetchTime = `-- name: UpdateFeedFetchTime :one
 UPDATE feeds
 SET last_fetched_at = $2
 WHERE id = $1
-RETURNING id, title, feed_url, last_fetched_at, created_at, website_url, description
+RETURNING id, title, feed_url, website_url, description, last_fetched_at, created_at
 `
 
 type UpdateFeedFetchTimeParams struct {
@@ -252,10 +252,10 @@ func (q *Queries) UpdateFeedFetchTime(ctx context.Context, arg UpdateFeedFetchTi
 		&i.ID,
 		&i.Title,
 		&i.FeedUrl,
-		&i.LastFetchedAt,
-		&i.CreatedAt,
 		&i.WebsiteUrl,
 		&i.Description,
+		&i.LastFetchedAt,
+		&i.CreatedAt,
 	)
 	return i, err
 }

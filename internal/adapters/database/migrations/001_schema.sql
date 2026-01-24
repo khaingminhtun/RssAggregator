@@ -1,15 +1,36 @@
 -- +goose Up
 -- ============================
--- USERS (Authentication)
+-- USERS
 -- ============================
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    auth_type TEXT NOT NULL DEFAULT 'local',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Auto-update updated_at
+-- +goose StatementBegin
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+-- +goose StatementEnd
+
+-- +goose StatementBegin
+CREATE TRIGGER users_set_updated_at
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+-- +goose StatementEnd
+
+-- ... rest of tables, feeds, posts, indexes ...
 
 -- ============================
 -- FEEDS (Global feed metadata)
@@ -17,7 +38,9 @@ CREATE TABLE users (
 CREATE TABLE feeds (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
-    url TEXT NOT NULL UNIQUE,
+    feed_url TEXT NOT NULL UNIQUE,
+    website_url TEXT NOT NULL,
+    description TEXT,
     last_fetched_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -33,7 +56,6 @@ CREATE TABLE user_feeds (
     CONSTRAINT user_feed_uniqueness UNIQUE (user_id, feed_id)
 );
 
--- Indexes for FK lookups
 CREATE INDEX idx_user_feeds_user_id ON user_feeds(user_id);
 CREATE INDEX idx_user_feeds_feed_id ON user_feeds(feed_id);
 
@@ -47,18 +69,23 @@ CREATE TABLE posts (
     url TEXT NOT NULL,
     description TEXT,
     published_at TIMESTAMPTZ NOT NULL,
-    guid TEXT NOT NULL,
+    guid TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    -- Prevent duplicate items per feed
     CONSTRAINT post_feed_guid_unique UNIQUE (feed_id, guid)
 );
 
--- Index for feed → posts queries
 CREATE INDEX idx_posts_feed_id ON posts(feed_id);
 
+-- Prevent duplicate links per feed
+CREATE UNIQUE INDEX post_feed_unique_link
+ON posts (feed_id, url);
+
 -- +goose Down
-DROP TABLE posts;
-DROP TABLE user_feeds;
-DROP TABLE feeds;
-DROP TABLE users;
+DROP INDEX IF EXISTS post_feed_unique_link;
+DROP TABLE IF EXISTS posts;
+DROP TABLE IF EXISTS user_feeds;
+DROP TABLE IF EXISTS feeds;
+DROP TRIGGER IF EXISTS users_set_updated_at ON users;
+DROP FUNCTION IF EXISTS set_updated_at();
+DROP TABLE IF EXISTS users;

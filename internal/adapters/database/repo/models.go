@@ -14,10 +14,10 @@ type Feed struct {
 	ID            int32              `json:"id"`
 	Title         string             `json:"title"`
 	FeedUrl       string             `json:"feed_url"`
-	LastFetchedAt pgtype.Timestamptz `json:"last_fetched_at"`
-	CreatedAt     time.Time          `json:"created_at"`
 	WebsiteUrl    string             `json:"website_url"`
 	Description   pgtype.Text        `json:"description"`
+	LastFetchedAt pgtype.Timestamptz `json:"last_fetched_at"`
+	CreatedAt     time.Time          `json:"created_at"`
 }
 
 type Post struct {
@@ -32,13 +32,13 @@ type Post struct {
 }
 
 type User struct {
-	ID           int32       `json:"id"`
-	Name         string      `json:"name"`
-	Email        string      `json:"email"`
-	PasswordHash string      `json:"password_hash"`
-	CreatedAt    time.Time   `json:"created_at"`
-	UpdatedAt    time.Time   `json:"updated_at"`
-	AuthType     pgtype.Text `json:"auth_type"`
+	ID           int32     `json:"id"`
+	Name         string    `json:"name"`
+	Email        string    `json:"email"`
+	PasswordHash string    `json:"password_hash"`
+	AuthType     string    `json:"auth_type"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type UserFeed struct {

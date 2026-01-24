@@ -7,21 +7,19 @@ package repo
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (name, email, password_hash, auth_type)
 VALUES ($1, $2, $3, $4)
-RETURNING id, name, email, password_hash, created_at, updated_at, auth_type
+RETURNING id, name, email, password_hash, auth_type, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	Name         string      `json:"name"`
-	Email        string      `json:"email"`
-	PasswordHash string      `json:"password_hash"`
-	AuthType     pgtype.Text `json:"auth_type"`
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	PasswordHash string `json:"password_hash"`
+	AuthType     string `json:"auth_type"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -37,15 +35,15 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Name,
 		&i.Email,
 		&i.PasswordHash,
+		&i.AuthType,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.AuthType,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, email, password_hash, created_at, updated_at, auth_type FROM users WHERE email = $1
+SELECT id, name, email, password_hash, auth_type, created_at, updated_at FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -56,15 +54,15 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Name,
 		&i.Email,
 		&i.PasswordHash,
+		&i.AuthType,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.AuthType,
 	)
 	return i, err
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT id, name, email, password_hash, created_at, updated_at, auth_type FROM users WHERE id = $1
+SELECT id, name, email, password_hash, auth_type, created_at, updated_at FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserById(ctx context.Context, id int32) (User, error) {
@@ -75,9 +73,9 @@ func (q *Queries) GetUserById(ctx context.Context, id int32) (User, error) {
 		&i.Name,
 		&i.Email,
 		&i.PasswordHash,
+		&i.AuthType,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.AuthType,
 	)
 	return i, err
 }

@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
 )
 
@@ -31,32 +30,30 @@ func (w *FeedWorker) Start(ctx context.Context, n int) {
 // run is a single worker goroutine
 func (w *FeedWorker) run(ctx context.Context, workerID int) {
 	for {
-		select {
-		case feed := <-w.q.Channel():
-			w.handle(feed, workerID)
-		case <-ctx.Done():
+		feed, ok := w.q.Dequeue(ctx)
+		if !ok {
 			return
 		}
+
+		w.handle(ctx, feed, workerID)
 	}
 }
 
 // handle processes a single feed and updates the fetch result
-func (w *FeedWorker) handle(feed repo.Feed, workerID int) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+func (w *FeedWorker) handle(
+	parentCtx context.Context,
+	feed repo.Feed,
+	workerID int,
+) {
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
 	defer cancel()
 
-	err := w.svc.ProcessFeed(ctx, feed)
-	if err != nil {
-		// optional logging
-		log.Printf("[Worker %d] Failed to process feed %d: %v", workerID, feed.ID, err)
+	if err := w.svc.ProcessFeed(ctx, feed); err != nil {
+		log.Printf("[Worker %d] feed=%d error=%v", workerID, feed.ID, err)
+		return
 	}
 
-	// Update only last fetched timestamp
-	_, updateErr := w.svc.feedRepo.UpdateFeedFetchTime(ctx, feed.ID, pgtype.Timestamptz{
-		Time:  time.Now(),
-		Valid: true,
-	})
-	if updateErr != nil {
-		log.Printf("[Worker %d] Failed to update last_fetched_at for feed %d: %v", workerID, feed.ID, updateErr)
+	if err := w.svc.MarkFetched(ctx, feed.ID); err != nil {
+		log.Printf("[Worker %d] update failed feed=%d err=%v", workerID, feed.ID, err)
 	}
 }

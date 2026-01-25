@@ -59,7 +59,7 @@ func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse
 	log.Info("validated url", "url", u.String())
 
 	// 3. Discover RSS feed
-	feedURL, err := s.fetcher.DiscoverFeed(u.String())
+	feedURL, err := s.fetcher.DiscoverFeed(ctx, u.String())
 	if err != nil {
 		log.Error("feed discovery failed", "url", u.String(), "error", err)
 		return nil, errorHandle.FeedDiscoveryFailed("unable to discover RSS feed from site")
@@ -68,7 +68,7 @@ func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse
 	log.Info("discovered feed url", "feed_url", feedURL)
 
 	// 3a. Fetch and parse RSS feed to get title/description
-	parsedFeed, err := s.fetcher.FetchAndParse(feedURL)
+	parsedFeed, err := s.fetcher.FetchAndParse(ctx, feedURL)
 	if err != nil {
 		log.Error("feed parsing failed", "feed_url", feedURL, "error", err)
 		return nil, errorHandle.FeedParseFailed("failed to parse RSS feed")
@@ -170,7 +170,7 @@ func (s *service) UpdateFeed(
 	log.Info("validated url", "url", u.String())
 
 	// 3. Discover RSS feed again (site may have changed)
-	feedURL, err := s.fetcher.DiscoverFeed(u.String())
+	feedURL, err := s.fetcher.DiscoverFeed(ctx, u.String())
 	if err != nil {
 		log.Error("feed discovery failed", "url", u.String(), "error", err)
 		return nil, errorHandle.FeedDiscoveryFailed("unable to discover RSS feed")
@@ -178,7 +178,7 @@ func (s *service) UpdateFeed(
 	log.Info("discovered feed url", "feed_url", feedURL)
 
 	// 4. Fetch & parse RSS feed
-	parsedFeed, err := s.fetcher.FetchAndParse(feedURL)
+	parsedFeed, err := s.fetcher.FetchAndParse(ctx, feedURL)
 	if err != nil {
 		log.Error("feed parsing failed", "feed_url", feedURL, "error", err)
 		return nil, errorHandle.FeedParseFailed("failed to parse RSS feed")

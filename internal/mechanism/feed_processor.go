@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
 	"github.com/khaingminhtun/rssagg/internal/feeds"
 	"github.com/khaingminhtun/rssagg/internal/posts"
@@ -83,7 +84,7 @@ func (s *FeedProcessorService) ProcessFeed(ctx context.Context, feed repo.Feed) 
 		return nil
 	}
 
-	parsedFeed, err := s.fetcher.FetchAndParse(feed.FeedUrl)
+	parsedFeed, err := s.fetcher.FetchAndParse(ctx, feed.FeedUrl)
 	if err != nil {
 		return err
 	}
@@ -123,4 +124,15 @@ func (s *FeedProcessorService) ProcessFeed(ctx context.Context, feed repo.Feed) 
 	}
 
 	return nil
+}
+
+func (s *FeedProcessorService) MarkFetched(
+	ctx context.Context,
+	feedID int32,
+) error {
+	_, err := s.feedRepo.UpdateFeedFetchTime(ctx, feedID, pgtype.Timestamptz{
+		Time:  time.Now(),
+		Valid: true,
+	})
+	return err
 }

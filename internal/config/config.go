@@ -34,9 +34,19 @@ func (d *DBconfig) DSN() string {
 	)
 }
 
-
 type RedisConfig struct {
 	// Redis related configurations
+	Host         string        `env:"REDIS_HOST" envDefault:"localhost"`
+	Port         string        `env:"REDIS_PORT" envDefault:"6379"`
+	Password     string        `env:"REDIS_PASSWORD"`
+	DB           int           `env:"REDIS_DB" envDefault:"0"`
+	DialTimeout  time.Duration `env:"REDIS_DIAL_TIMEOUT" envDefault:"5s"`
+	ReadTimeout  time.Duration `env:"REDIS_READ_TIMEOUT" envDefault:"3s"`
+	WriteTimeout time.Duration `env:"REDIS_WRITE_TIMEOUT" envDefault:"3s"`
+}
+
+func (r RedisConfig) Addr() string {
+	return fmt.Sprintf("%s:%s", r.Host, r.Port)
 }
 
 type JWTConfig struct {

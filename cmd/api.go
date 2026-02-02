@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/khaingminhtun/rssagg/internal/adapters/cache"
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
 	"github.com/khaingminhtun/rssagg/internal/auth"
 	"github.com/khaingminhtun/rssagg/internal/config"
@@ -21,6 +22,7 @@ import (
 type application struct {
 	config config.Config
 	db     *pgxpool.Pool
+	redis  *cache.RedisStore
 }
 
 // routes sets up the application routes and middleware
@@ -50,6 +52,8 @@ func (app *application) routes() *chi.Mux {
 	r.Post("/api/v1/logout", authHandler.Logout)
 
 	// ------ Feeds & Posts ------
+	// 3. Domain caches
+// feedCache := cache.NewFeedCache(app.redis, 1*time.Hour)
 	fetcher := feeds.NewFetcherService(15*time.Second, 5, 3)
 	feedRepo := feeds.NewFeedRepository(app.db)
 	postRepo := posts.NewPostRepository(app.db)

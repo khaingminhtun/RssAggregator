@@ -17,6 +17,10 @@ const (
 	TypeFeedParseFailed      = "feed_parse_failed"
 	TypeDatabaseError        = "database_error"
 	TypeExternalServiceError = "external_service_error"
+
+	//Cache
+	TypeCacheUnavailable = "cache_unavailable"
+	TypeCacheCorrupted   = "cache_corrupted"
 )
 
 type ApiError struct {
@@ -68,6 +72,15 @@ func ExternalServiceError(msg string) error {
 	return ApiError{Type: TypeExternalServiceError, Msg: msg}
 }
 
+// ------------------ Cache Errors -----------------
+func CacheUnavailable(msg string) error {
+	return ApiError{Type: TypeCacheUnavailable, Msg: msg}
+}
+
+func CacheCorrupted(msg string) error {
+	return ApiError{Type: TypeCacheCorrupted, Msg: msg}
+}
+
 var typeToStatus = map[string]int{
 	TypeInvalidRequest:       http.StatusUnprocessableEntity, // 422
 	TypeNotFound:             http.StatusNotFound,            // 404
@@ -78,6 +91,8 @@ var typeToStatus = map[string]int{
 	TypeFeedParseFailed:      http.StatusBadRequest,          // 400
 	TypeDatabaseError:        http.StatusInternalServerError, // 500
 	TypeExternalServiceError: http.StatusBadGateway,          // 502
+	TypeCacheUnavailable:     http.StatusServiceUnavailable,  // 503
+	TypeCacheCorrupted:       http.StatusInternalServerError, // 500
 }
 
 func RespondHTTPsError(w http.ResponseWriter, r *http.Request, err error) {

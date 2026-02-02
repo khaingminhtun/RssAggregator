@@ -11,8 +11,10 @@ import (
 	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/khaingminhtun/rssagg/internal/adapters/cache"
 	"github.com/khaingminhtun/rssagg/internal/config"
 	"github.com/khaingminhtun/rssagg/internal/pkg/log"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -43,11 +45,31 @@ func main() {
 		os.Exit(1)
 	}
 
+	//3..5 Redis
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:         cfg.Redis.Host,
+		Password:     cfg.Redis.Password,
+		DB:           cfg.Redis.DB,
+		DialTimeout:  cfg.Redis.DialTimeout,
+		ReadTimeout:  cfg.Redis.ReadTimeout,
+		WriteTimeout: cfg.Redis.WriteTimeout,
+	})
+
+	if err := redisClient.Ping(ctx).Err(); err != nil {
+		log.Error("redis ping failed", "error", err)
+		os.Exit(1)
+	}
+
+	store := cache.NewRedisStore(redisClient)
+
 	// 4. Initialize app struct
 	app := &application{
 		config: *cfg,
 		db:     dbPool,
+		redis:  store,
 	}
+
+	defer redisClient.Close()
 
 	// 5. Start background tasks (workers + scheduler)
 	app.setupBackgroundTasks(ctx)

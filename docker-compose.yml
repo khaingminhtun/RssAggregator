@@ -25,17 +25,18 @@ services:
     depends_on:
       - db
 
+  redis:
+    image: redis:7
+    container_name: my_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+
 volumes:
   pgdata:
 
 
   
 
-  # redis:
-  #   image: redis:7
-  #   container_name: my_redis
-  #   restart: always
-  #   ports:
-  #     - "6379:6379"
-  #   command: ["redis-server", "--save", "", "--appendonly", "no"]
 

@@ -53,12 +53,13 @@ func (app *application) routes() *chi.Mux {
 
 	// ------ Feeds & Posts ------
 	// 3. Domain caches
-// feedCache := cache.NewFeedCache(app.redis, 1*time.Hour)
+	// feedCache := cache.NewFeedCache(app.redis, 1*time.Hour)
+	rssCache := cache.NewRSSURLCache(app.redis, 1*time.Hour)
 	fetcher := feeds.NewFetcherService(15*time.Second, 5, 3)
 	feedRepo := feeds.NewFeedRepository(app.db)
 	postRepo := posts.NewPostRepository(app.db)
 
-	feedService := feeds.NewFeedService(feedRepo, postRepo, fetcher)
+	feedService := feeds.NewFeedService(feedRepo, postRepo, fetcher, rssCache)
 	feedHandler := feeds.NewFeedHandler(feedService)
 
 	postService := posts.NewPostService(postRepo)

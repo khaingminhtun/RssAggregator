@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/khaingminhtun/rssagg/internal/adapters/cache"
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
 	"github.com/khaingminhtun/rssagg/internal/pkg/errorHandle"
 	"github.com/khaingminhtun/rssagg/internal/pkg/log"
@@ -34,13 +35,15 @@ type service struct {
 	feedRepo FeedRepository
 	postRepo posts.PostRepository
 	fetcher  *FetcherService
+	rssCache *cache.RSSURLCache
 }
 
-func NewFeedService(feedRepo FeedRepository, postRepo posts.PostRepository, fetcher *FetcherService) FeedService {
+func NewFeedService(feedRepo FeedRepository, postRepo posts.PostRepository, fetcher *FetcherService, rssCache *cache.RSSURLCache) FeedService {
 	return &service{
 		feedRepo: feedRepo,
 		postRepo: postRepo,
 		fetcher:  fetcher,
+		rssCache: rssCache,
 	}
 }
 
@@ -56,25 +59,44 @@ func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse
 	if err != nil {
 		return nil, errorHandle.BadRequest("invalid site_url" + siteURL)
 	}
-	log.Info("validated url", "url", u.String())
+	normalizedURL := u.String()
+	log.Info("validated url", "url", normalizedURL)
 
-	// 3. Discover RSS feed
-	feedURL, err := s.fetcher.DiscoverFeed(ctx, u.String())
-	if err != nil {
-		log.Error("feed discovery failed", "url", u.String(), "error", err)
-		return nil, errorHandle.FeedDiscoveryFailed("unable to discover RSS feed from site")
+	var feedURL string
+
+	// 3. Try Redis cache first
+	if cachedURL, ok, err := s.rssCache.Get(ctx, normalizedURL); err != nil {
+		// Redis failure should NOT break request
+		log.Info("rss cache unavailable", "error", err)
+	} else if ok {
+		feedURL = cachedURL
+		log.Info("rss url cache hit", "feed_url", feedURL)
+	}
+	// 4. Cache miss → discover RSS
+	if feedURL == "" {
+		discoveredURL, err := s.fetcher.DiscoverFeed(ctx, normalizedURL)
+		if err != nil {
+			log.Error("feed discovery failed", "url", normalizedURL, "error", err)
+			return nil, errorHandle.FeedDiscoveryFailed("unable to discover RSS feed from site")
+		}
+
+		feedURL = discoveredURL
+		log.Info("discovered feed url", "feed_url", feedURL)
+
+		// Best-effort cache write
+		if err := s.rssCache.Set(ctx, normalizedURL, feedURL); err != nil {
+			log.Info("failed to cache rss url", "error", err)
+		}
 	}
 
-	log.Info("discovered feed url", "feed_url", feedURL)
-
-	// 3a. Fetch and parse RSS feed to get title/description
+	// 5. Fetch & parse RSS feed (still required)
 	parsedFeed, err := s.fetcher.FetchAndParse(ctx, feedURL)
 	if err != nil {
 		log.Error("feed parsing failed", "feed_url", feedURL, "error", err)
 		return nil, errorHandle.FeedParseFailed("failed to parse RSS feed")
 	}
 
-	// 4. Save feed in DB
+	// 6. Save feed in DB
 	feed, err := s.feedRepo.CreateFeed(ctx, repo.CreateFeedParams{
 		FeedUrl: feedURL,
 		Title:   parsedFeed.Title,
@@ -82,14 +104,14 @@ func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse
 			String: parsedFeed.Description,
 			Valid:  parsedFeed.Description != "",
 		},
-		WebsiteUrl: siteURL,
+		WebsiteUrl: normalizedURL,
 	})
 	if err != nil {
 		log.Error("feed creation failed in DB", "feed_url", feedURL, "error", err)
-		return nil, errorHandle.FeedAlreadyExists("feed with this URL already exists or DB error")
+		return nil, errorHandle.FeedAlreadyExists("feed with this URL already exists")
 	}
 
-	log.Info("feed created successfully", "feed_id", feed)
+	log.Info("feed created successfully", "feed_id", feed.ID)
 
 	const layout = "2006-01-02 15:04:05"
 
@@ -106,16 +128,11 @@ func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse
 
 // get feed by id
 func (s *service) GetFeedByID(ctx context.Context, id int32) (*FeedResponse, error) {
-	if id <= 0 {
-		return nil, errorHandle.BadRequest("invalid feed_id")
-	}
-
 	feed, err := s.feedRepo.GetFeedByID(ctx, id)
 	if err != nil {
-		log.Error("failed to get feed by id", "error", err)
-		return nil, errorHandle.NotFound("feed not found")
+		log.Error("failed to get feed", "error", err)
+		return nil, errorHandle.DatabaseError("unable to fetch feeds from DB")
 	}
-
 	return mapFeedToResponse(feed), nil
 }
 

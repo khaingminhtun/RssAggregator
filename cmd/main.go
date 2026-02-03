@@ -47,7 +47,7 @@ func main() {
 
 	//3..5 Redis
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:         cfg.Redis.Host,
+		Addr:         fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port),
 		Password:     cfg.Redis.Password,
 		DB:           cfg.Redis.DB,
 		DialTimeout:  cfg.Redis.DialTimeout,

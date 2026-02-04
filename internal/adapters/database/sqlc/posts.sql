@@ -6,6 +6,17 @@ ON CONFLICT (feed_id, url) DO UPDATE
 RETURNING *;
 
 
+-- name: GetPostByID :one
+SELECT *
+FROM posts
+WHERE id = $1
+LIMIT 1;
+
+-- name: GetPostsByFeedID :many
+SELECT *
+FROM posts
+WHERE feed_id = $1
+ORDER BY published_at DESC;
 
 -- name: GetAllPosts :many
 SELECT

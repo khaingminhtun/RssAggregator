@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/khaingminhtun/rssagg/internal/auth"
 	"github.com/khaingminhtun/rssagg/internal/pkg/errorHandle"
 	"github.com/khaingminhtun/rssagg/internal/pkg/json"
 )
@@ -36,30 +37,59 @@ func (h *FeedHandler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 	json.RespondJSON(w, http.StatusCreated, "feed create successfully", feed)
 }
 
-// // GET /feeds/{feedID}/posts
-// func (h *FeedHandler) GetFeedPosts(w http.ResponseWriter, r *http.Request) {
-// 	//1. Parse feedID from URL
-// 	feedIDStr := chi.URLParam(r, "feedID")
-// 	if feedIDStr == "" {
-// 		errorHandle.RespondHTTPsError(w, r, errorHandle.BadRequest("feedID is required"))
-// 		return
-// 	}
+// POST /feeds/{feedID}/subscribe
+func (h *FeedHandler) SubscribeUserToFeed(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	// 1. Extract feedID from URL
+	feedIDStr := chi.URLParam(r, "feedID")
+	if feedIDStr == "" {
+		errorHandle.RespondHTTPError(
+			w,
+			errorHandle.BadRequest("feed_id is required"),
+		)
+		return
+	}
 
-// 	feedID, err := strconv.ParseInt(feedIDStr, 10, 32)
-// 	if err != nil {
-// 		errorHandle.RespondHTTPsError(w, r, errorHandle.BadRequest("feedID must be a number"))
-// 		return
-// 	}
+	feedID, err := strconv.Atoi(feedIDStr)
+	if err != nil || feedID <= 0 {
+		errorHandle.RespondHTTPError(
+			w,
+			errorHandle.BadRequest("invalid feed_id"),
+		)
+		return
+	}
 
-// 	//2. call service
-// 	posts, err := h.FeedService.FetchFeedPosts(r.Context(), int32(feedID))
-// 	if err != nil {
-// 		errorHandle.RespondHTTPsError(w, r, err)
-// 		return
-// 	}
+	// 2. Extract userID from context (set by auth middleware)
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok || userID <= 0 {
+		errorHandle.RespondHTTPError(
+			w,
+			errorHandle.Unauthorized("authentication required"),
+		)
+		return
+	}
 
-// 	json.RespondJSON(w, http.StatusOK, "feed posts fetched successfully", posts)
-// }
+	// 3. Subscribe
+	err = h.FeedService.SubscribeUserToFeed(
+		r.Context(),
+		int32(userID),
+		int32(feedID),
+	)
+	if err != nil {
+		errorHandle.RespondHTTPError(w, err)
+		return
+	}
+
+	// 4. Success response
+	json.RespondJSON(
+		w,
+		http.StatusCreated,
+		"subscribed to feed successfully",
+		nil,
+	)
+}
 
 // GET /feeds/{feedID} - get feed by ID
 func (h *FeedHandler) GetFeedByID(w http.ResponseWriter, r *http.Request) {

@@ -23,3 +23,8 @@ func (c *RSSURLCache) Set(ctx context.Context, websiteURL, rssURL string) error 
 	key := RSSURLKey(websiteURL)
 	return c.store.SetString(ctx, key, rssURL, c.ttl)
 }
+
+func (c *RSSURLCache) Delete(ctx context.Context, websiteURL string) error {
+	key := RSSURLKey(websiteURL)
+	return c.store.Delete(ctx, key)
+}

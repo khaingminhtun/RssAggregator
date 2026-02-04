@@ -15,7 +15,8 @@ import (
 
 type FeedService interface {
 	CreateFeed(ctx context.Context, siteURL string) (*FeedResponse, error)
-	// FetchFeedPosts(ctx context.Context, feedID int32) ([]PostResponse, error)
+
+	SubscribeUserToFeed(ctx context.Context, userID int32, feedID int32) error
 
 	// Read
 	GetFeedByID(ctx context.Context, id int32) (*FeedResponse, error)
@@ -48,70 +49,89 @@ func NewFeedService(feedRepo FeedRepository, postRepo posts.PostRepository, fetc
 }
 
 // create feed from site url
+// create feed from site url
 func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse, error) {
 	// 1. Validate input
 	if siteURL == "" {
-		return nil, errorHandle.BadRequest("site_url is required" + siteURL)
+		return nil, errorHandle.BadRequest("site_url is required")
 	}
 
-	// 2. Validate URL
+	// 2. Validate & normalize URL
 	u, err := utils.ValidateURL(siteURL)
 	if err != nil {
-		return nil, errorHandle.BadRequest("invalid site_url" + siteURL)
+		return nil, errorHandle.BadRequest("invalid site_url")
 	}
 	normalizedURL := u.String()
 	log.Info("validated url", "url", normalizedURL)
 
 	var feedURL string
 
-	// 3. Try Redis cache first
+	// 3. Try Redis cache
 	if cachedURL, ok, err := s.rssCache.Get(ctx, normalizedURL); err != nil {
-		// Redis failure should NOT break request
 		log.Info("rss cache unavailable", "error", err)
 	} else if ok {
 		feedURL = cachedURL
 		log.Info("rss url cache hit", "feed_url", feedURL)
 	}
-	// 4. Cache miss → discover RSS
+
+	// 4. Cache miss → discover feed
 	if feedURL == "" {
 		discoveredURL, err := s.fetcher.DiscoverFeed(ctx, normalizedURL)
 		if err != nil {
 			log.Error("feed discovery failed", "url", normalizedURL, "error", err)
-			return nil, errorHandle.FeedDiscoveryFailed("unable to discover RSS feed from site")
+			return nil, errorHandle.FeedDiscoveryFailed(
+				"unable to discover RSS feed from site",
+			)
 		}
-
 		feedURL = discoveredURL
-		log.Info("discovered feed url", "feed_url", feedURL)
-
-		// Best-effort cache write
-		if err := s.rssCache.Set(ctx, normalizedURL, feedURL); err != nil {
-			log.Info("failed to cache rss url", "error", err)
-		}
+		log.Info("rss feed discovered", "feed_url", feedURL)
 	}
 
-	// 5. Fetch & parse RSS feed (still required)
+	// 5. Fetch & parse (authoritative validation step)
 	parsedFeed, err := s.fetcher.FetchAndParse(ctx, feedURL)
 	if err != nil {
 		log.Error("feed parsing failed", "feed_url", feedURL, "error", err)
-		return nil, errorHandle.FeedParseFailed("failed to parse RSS feed")
+
+		// Cache poisoning protection
+		if feedURL != "" {
+			_ = s.rssCache.Delete(ctx, normalizedURL)
+		}
+
+		return nil, errorHandle.FeedParseFailed(
+			"failed to fetch or parse RSS feed",
+		)
 	}
 
-	// 6. Save feed in DB
+	// 6. Cache ONLY after full success
+	if err := s.rssCache.Set(ctx, normalizedURL, feedURL); err != nil {
+		log.Info("failed to cache rss url", "error", err)
+	}
+
+	// 7. Persist in DB
 	feed, err := s.feedRepo.CreateFeed(ctx, repo.CreateFeedParams{
-		FeedUrl: feedURL,
-		Title:   parsedFeed.Title,
+		FeedUrl:    feedURL,
+		Title:      parsedFeed.Title,
+		WebsiteUrl: normalizedURL,
 		Description: pgtype.Text{
 			String: parsedFeed.Description,
 			Valid:  parsedFeed.Description != "",
 		},
-		WebsiteUrl: normalizedURL,
 	})
 	if err != nil {
 		log.Error("feed creation failed in DB", "feed_url", feedURL, "error", err)
-		return nil, errorHandle.FeedAlreadyExists("feed with this URL already exists")
+		return nil, errorHandle.FeedAlreadyExists(
+			"feed with this URL already exists",
+		)
 	}
 
-	log.Info("feed created successfully", "feed_id", feed.ID)
+	// userID, ok := auth.UserIDFromContext(ctx)
+	// if ok && userID > 0 {
+	// 	err = s.SubscribeUserToFeed(ctx, userID, feed.ID)
+	// 	if err != nil {
+	// 		log.Error("failed to subscribe user to feed after creation", "user_id", userID, "feed_id", feed.ID, "error", err)
+	// 		return nil, err
+	// 	}
+	// }
 
 	const layout = "2006-01-02 15:04:05"
 
@@ -122,8 +142,28 @@ func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse
 		WebsiteUrl:    feed.WebsiteUrl,
 		FeedURL:       feed.FeedUrl,
 		CreatedAt:     feed.CreatedAt.Format(layout),
-		LastFetchedAt: feed.CreatedAt.Format(layout),
+		LastFetchedAt: feed.LastFetchedAt.Time.Format(layout),
 	}, nil
+}
+
+// subscribe user to feed
+func (s *service) SubscribeUserToFeed(ctx context.Context, userID int32, feedID int32) error {
+
+	// 1. Verify feed exists
+	feed, err := s.feedRepo.GetFeedByID(ctx, feedID)
+	if err != nil {
+		log.Error("feed not found", "feed_id", feedID, "error", err)
+		return errorHandle.NotFound("feed does not exist")
+	}
+
+	_, err = s.feedRepo.SubscribeUserToFeed(ctx, userID, feedID)
+	if err != nil {
+		log.Error("failed to subscribe user to feed", "user_id", userID, "feed_id", feedID, "error", err)
+		return errorHandle.IsAlreadySubscribed("user is already subscribed to this feed")
+	}
+
+	log.Info("user subscribed to feed", "user_id", userID, "feed_id", feed.ID)
+	return nil
 }
 
 // get feed by id

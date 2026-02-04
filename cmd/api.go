@@ -74,7 +74,10 @@ func (app *application) routes() *chi.Mux {
 		r.Delete("/feeds/{id}", feedHandler.DeleteFeedByID)
 		r.Delete("/feeds/{id}/unused", feedHandler.DeleteFeedIfUnused)
 		r.Delete("/users/{user_id}/feeds", feedHandler.DeleteAllFeedsByUserID)
+
 		r.Get("/posts", postHandler.GetAllPosts)
+		r.Get("/posts/{id}", postHandler.GetPostByID)
+		r.Get("/feeds/{feedID}/posts", postHandler.GetPostsByFeedID)
 	})
 
 	// protected routes example
@@ -84,6 +87,7 @@ func (app *application) routes() *chi.Mux {
 			userID, _ := auth.UserIDFromContext(r.Context())
 			w.Write([]byte(fmt.Sprintf("your user id: %d", userID)))
 		})
+		r.Post("/api/v1/feeds/{feedID}/subscribe", feedHandler.SubscribeUserToFeed)
 	})
 
 	return r

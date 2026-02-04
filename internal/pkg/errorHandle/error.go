@@ -11,6 +11,7 @@ const (
 	TypeInvalidRequest       = "invalid_request"
 	TypeNotFound             = "not_found"
 	TypeConflict             = "conflict"
+	TypeAlreadySubscribe     = "user already subscribe this feed"
 	TypeUnauthorized         = "unauthorized"
 	TypeFeedAlreadyExists    = "feed_already_exists"
 	TypeFeedDiscoveryFailed  = "feed_discovery_failed"
@@ -62,6 +63,10 @@ func FeedDiscoveryFailed(msg string) error {
 
 func FeedParseFailed(msg string) error {
 	return ApiError{Type: TypeFeedParseFailed, Msg: msg}
+}
+
+func IsAlreadySubscribed(msg string) error {
+	return ApiError{Type: TypeAlreadySubscribe, Msg: msg}
 }
 
 func DatabaseError(msg string) error {

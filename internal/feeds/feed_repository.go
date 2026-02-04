@@ -11,6 +11,7 @@ import (
 type FeedRepository interface {
 	// Create
 	CreateFeed(ctx context.Context, arg repo.CreateFeedParams) (repo.Feed, error)
+	SubscribeUserToFeed(ctx context.Context, userID int32, feedID int32) (repo.UserFeed, error)
 
 	// Read
 	GetFeedByID(ctx context.Context, id int32) (repo.Feed, error)
@@ -44,6 +45,13 @@ func NewFeedRepository(db repo.DBTX) FeedRepository {
 
 func (r *feedRepo) CreateFeed(ctx context.Context, arg repo.CreateFeedParams) (repo.Feed, error) {
 	return r.q.CreateFeed(ctx, arg)
+}
+
+func (r *feedRepo) SubscribeUserToFeed(ctx context.Context, userID int32, feedID int32) (repo.UserFeed, error) {
+	return r.q.CreateSubscription(ctx, repo.CreateSubscriptionParams{
+		UserID: userID,
+		FeedID: feedID,
+	})
 }
 
 func (r *feedRepo) GetFeedByID(ctx context.Context, id int32) (repo.Feed, error) {

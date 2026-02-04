@@ -21,6 +21,8 @@ type Querier interface {
 	GetFeedByID(ctx context.Context, id int32) (Feed, error)
 	GetFeedURLByID(ctx context.Context, id int32) (string, error)
 	GetFeedsByUserID(ctx context.Context, userID int32) ([]Feed, error)
+	GetPostByID(ctx context.Context, id int32) (Post, error)
+	GetPostsByFeedID(ctx context.Context, feedID int32) ([]Post, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserById(ctx context.Context, id int32) (User, error)
 	UpdateFeed(ctx context.Context, arg UpdateFeedParams) (Feed, error)

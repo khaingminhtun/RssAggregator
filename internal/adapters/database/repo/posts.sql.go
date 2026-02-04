@@ -22,7 +22,7 @@ type CreatePostParams struct {
 	FeedID      int32     `json:"feed_id"`
 	Title       string    `json:"title"`
 	Url         string    `json:"url"`
-	Description string       `json:"description"`
+	Description string    `json:"description"`
 	PublishedAt time.Time `json:"published_at"`
 	Guid        string    `json:"guid"`
 }
@@ -66,6 +66,65 @@ ORDER BY published_at DESC
 
 func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
 	rows, err := q.db.Query(ctx, getAllPosts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Post
+	for rows.Next() {
+		var i Post
+		if err := rows.Scan(
+			&i.ID,
+			&i.FeedID,
+			&i.Title,
+			&i.Url,
+			&i.Description,
+			&i.PublishedAt,
+			&i.Guid,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPostByID = `-- name: GetPostByID :one
+SELECT id, feed_id, title, url, description, published_at, guid, created_at
+FROM posts
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetPostByID(ctx context.Context, id int32) (Post, error) {
+	row := q.db.QueryRow(ctx, getPostByID, id)
+	var i Post
+	err := row.Scan(
+		&i.ID,
+		&i.FeedID,
+		&i.Title,
+		&i.Url,
+		&i.Description,
+		&i.PublishedAt,
+		&i.Guid,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getPostsByFeedID = `-- name: GetPostsByFeedID :many
+SELECT id, feed_id, title, url, description, published_at, guid, created_at
+FROM posts
+WHERE feed_id = $1
+ORDER BY published_at DESC
+`
+
+func (q *Queries) GetPostsByFeedID(ctx context.Context, feedID int32) ([]Post, error) {
+	rows, err := q.db.Query(ctx, getPostsByFeedID, feedID)
 	if err != nil {
 		return nil, err
 	}

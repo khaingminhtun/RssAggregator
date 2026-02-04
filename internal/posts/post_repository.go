@@ -9,6 +9,8 @@ import (
 type PostRepository interface {
 	CreatePost(ctx context.Context, arg repo.CreatePostParams) (repo.Post, error)
 	GetAllPosts(ctx context.Context) ([]repo.Post, error)
+	GetPostByID(ctx context.Context, id int32) (repo.Post, error)
+	GetPostsByFeedID(ctx context.Context, feedID int32) ([]repo.Post, error)
 }
 
 // --- Concrete SQLC-backed implementation --- //
@@ -31,4 +33,14 @@ func (r *postRepo) CreatePost(ctx context.Context, arg repo.CreatePostParams) (r
 // get all posts
 func (r *postRepo) GetAllPosts(ctx context.Context) ([]repo.Post, error) {
 	return r.q.GetAllPosts(ctx)
+}
+
+// get post by ID
+func (r *postRepo) GetPostByID(ctx context.Context, id int32) (repo.Post, error) {
+	return r.q.GetPostByID(ctx, id)
+}
+
+// get posts by feed ID
+func (r *postRepo) GetPostsByFeedID(ctx context.Context, feedID int32) ([]repo.Post, error) {
+	return r.q.GetPostsByFeedID(ctx, feedID)
 }

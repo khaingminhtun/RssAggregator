@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
+	"github.com/khaingminhtun/rssagg/internal/pkg/utils"
 )
 
 type PostRepository interface {
@@ -11,6 +12,10 @@ type PostRepository interface {
 	GetAllPosts(ctx context.Context) ([]repo.Post, error)
 	GetPostByID(ctx context.Context, id int32) (repo.Post, error)
 	GetPostsByFeedID(ctx context.Context, feedID int32) ([]repo.Post, error)
+
+	GetLatestPosts(ctx context.Context, limit int32) ([]repo.Post, error)
+	SearchPosts(ctx context.Context, query string, limit int32, offset int32) ([]repo.Post, error)
+	GetPostsForUser(ctx context.Context, userID int32, limit int32, offset int32) ([]repo.Post, error)
 }
 
 // --- Concrete SQLC-backed implementation --- //
@@ -43,4 +48,27 @@ func (r *postRepo) GetPostByID(ctx context.Context, id int32) (repo.Post, error)
 // get posts by feed ID
 func (r *postRepo) GetPostsByFeedID(ctx context.Context, feedID int32) ([]repo.Post, error) {
 	return r.q.GetPostsByFeedID(ctx, feedID)
+}
+
+// get latest posts with limit
+func (r *postRepo) GetLatestPosts(ctx context.Context, limit int32) ([]repo.Post, error) {
+	return r.q.GetLatestPosts(ctx, limit)
+}
+
+// search posts by query in title or description
+func (r *postRepo) SearchPosts(ctx context.Context, query string, limit int32, offset int32) ([]repo.Post, error) {
+	return r.q.SearchPosts(ctx, repo.SearchPostsParams{
+		Column1: utils.NullString("%" + query + "%"),
+		Limit:   limit,
+		Offset:  offset,
+	})
+}
+
+// get posts for user with pagination
+func (r *postRepo) GetPostsForUser(ctx context.Context, userID int32, limit int32, offset int32) ([]repo.Post, error) {
+	return r.q.GetPostsForUser(ctx, repo.GetPostsForUserParams{
+		UserID: userID,
+		Limit:  limit,
+		Offset: offset,
+	})
 }

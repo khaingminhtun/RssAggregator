@@ -12,6 +12,7 @@ type FeedRepository interface {
 	// Create
 	CreateFeed(ctx context.Context, arg repo.CreateFeedParams) (repo.Feed, error)
 	SubscribeUserToFeed(ctx context.Context, userID int32, feedID int32) (repo.UserFeed, error)
+	UnsubscribeUserFromFeed(ctx context.Context, userID int32, feedID int32) error
 
 	// Read
 	GetFeedByID(ctx context.Context, id int32) (repo.Feed, error)
@@ -49,6 +50,13 @@ func (r *feedRepo) CreateFeed(ctx context.Context, arg repo.CreateFeedParams) (r
 
 func (r *feedRepo) SubscribeUserToFeed(ctx context.Context, userID int32, feedID int32) (repo.UserFeed, error) {
 	return r.q.CreateSubscription(ctx, repo.CreateSubscriptionParams{
+		UserID: userID,
+		FeedID: feedID,
+	})
+}
+
+func (r *feedRepo) UnsubscribeUserFromFeed(ctx context.Context, userID int32, feedID int32) error {
+	return r.q.UnsubscribeUserFromFeed(ctx, repo.UnsubscribeUserFromFeedParams{
 		UserID: userID,
 		FeedID: feedID,
 	})

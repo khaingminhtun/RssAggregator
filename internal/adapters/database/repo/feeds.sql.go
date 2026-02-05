@@ -7,6 +7,7 @@ package repo
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -18,10 +19,10 @@ RETURNING id, title, feed_url, website_url, description, last_fetched_at, create
 `
 
 type CreateFeedParams struct {
-	FeedUrl     string      `json:"feed_url"`
-	Title       string      `json:"title"`
-	Description pgtype.Text `json:"description"`
-	WebsiteUrl  string      `json:"website_url"`
+	FeedUrl     string         `json:"feed_url"`
+	Title       string         `json:"title"`
+	Description sql.NullString `json:"description"`
+	WebsiteUrl  string         `json:"website_url"`
 }
 
 func (q *Queries) CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, error) {
@@ -206,7 +207,7 @@ type UpdateFeedParams struct {
 	ID            int32              `json:"id"`
 	Title         string             `json:"title"`
 	FeedUrl       string             `json:"feed_url"`
-	Description   pgtype.Text        `json:"description"`
+	Description   sql.NullString     `json:"description"`
 	WebsiteUrl    string             `json:"website_url"`
 	LastFetchedAt pgtype.Timestamptz `json:"last_fetched_at"`
 }

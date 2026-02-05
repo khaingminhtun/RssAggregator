@@ -10,9 +10,23 @@ sql:
         out: "./internal/adapters/database/repo"
         sql_package: "pgx/v5"
         emit_json_tags: true
-        emit_interface: true # generate Querier interface
+        emit_interface: true
+
         overrides:
+          # NON-NULL text → string
           - db_type: "text"
+            nullable: false
             go_type: "string"
+
+          # NULLABLE text → sql.NullString
+          - db_type: "text"
+            nullable: true
+            go_type:
+              import: "database/sql"
+              type: "NullString"
+
+          # timestamptz (already correct)
           - db_type: "timestamptz"
-            go_type: "time.Time"
+            go_type:
+              import: "time"
+              type: "Time"

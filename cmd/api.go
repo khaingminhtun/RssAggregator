@@ -65,31 +65,54 @@ func (app *application) routes() *chi.Mux {
 	postService := posts.NewPostService(postRepo)
 	postHandler := posts.NewPostHandler(postService)
 
+    // API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Post("/createFeed", feedHandler.CreateFeed)
-		r.Get("/feeds/{id}", feedHandler.GetFeedByID)
-		r.Get("/feeds", feedHandler.GetAllFeeds)
-		r.Get("/users/{userID}/feeds", feedHandler.GetFeedsByUserID)
-		r.Patch("/feeds/{id}", feedHandler.UpdateFeed)
-		r.Delete("/feeds/{id}", feedHandler.DeleteFeedByID)
-		r.Delete("/feeds/{id}/unused", feedHandler.DeleteFeedIfUnused)
-		r.Delete("/users/{user_id}/feeds", feedHandler.DeleteAllFeedsByUserID)
 
-		r.Get("/posts", postHandler.GetAllPosts)
-		r.Get("/posts/{id}", postHandler.GetPostByID)
-		r.Get("/feeds/{feedID}/posts", postHandler.GetPostsByFeedID)
-	})
+	// -------------------
+	// Public Routes
+	// -------------------
+	r.Post("/feeds", feedHandler.CreateFeed)              // create feed (could be public or private)
+	r.Get("/feeds/{id}", feedHandler.GetFeedByID)        // get single feed
+	r.Get("/feeds", feedHandler.GetAllFeeds)             // get all feeds
+	r.Get("/users/{userID}/feeds", feedHandler.GetFeedsByUserID) // feeds of a user
 
-	// protected routes example
+	r.Get("/posts", postHandler.GetAllPosts)             // get all posts
+	r.Get("/posts/{id}", postHandler.GetPostByID)       // get single post
+	r.Get("/feeds/{feedID}/posts", postHandler.GetPostsByFeedID) // posts of a feed
+	r.Get("/posts/latest", postHandler.GetLatestPosts)  // latest posts
+	r.Get("/posts/search", postHandler.SearchPosts)     // search posts
+	// Feed management
+		r.Patch("/feeds/{id}", feedHandler.UpdateFeed)                 // update feed
+		r.Delete("/feeds/{id}", feedHandler.DeleteFeedByID)           // delete feed
+		r.Delete("/feeds/{id}/unused", feedHandler.DeleteFeedIfUnused) // delete unused feed
+		r.Delete("/users/{userID}/feeds", feedHandler.DeleteAllFeedsByUserID) // delete all feeds of user
+
+		// Subscriptions
+		r.Post("/feeds/{feedID}/subscribe", feedHandler.SubscribeUserToFeed)
+		r.Post("/feeds/{feedID}/unsubscribe", feedHandler.UnsubscribeUserFromFeed) // optional
+
+		// Timeline / Favorites
+		r.Get("/timeline", postHandler.GetTimeline)                     // timeline posts
+		r.Patch("/posts/{id}/read", postHandler.MarkPostRead)           // mark read/unread
+		r.Patch("/posts/{id}/favorite", postHandler.MarkPostFavorite)   // mark favorite
+		r.Get("/users/me/favorites", postHandler.GetFavoritePosts)      // user's favorites
+
+	// -------------------
+	// Protected Routes (JWT Required)
+	// -------------------
 	r.Group(func(r chi.Router) {
 		r.Use(jwtSvc.JWTMiddleware)
-		r.Get("/api/v1/me", func(w http.ResponseWriter, r *http.Request) {
+
+		// User
+		r.Get("/me", func(w http.ResponseWriter, r *http.Request) {
 			userID, _ := auth.UserIDFromContext(r.Context())
 			w.Write([]byte(fmt.Sprintf("your user id: %d", userID)))
 		})
-		r.Post("/api/v1/feeds/{feedID}/subscribe", feedHandler.SubscribeUserToFeed)
+
+		
 	})
 
+})
 	return r
 }
 

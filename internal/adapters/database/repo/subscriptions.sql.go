@@ -31,3 +31,61 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 	)
 	return i, err
 }
+
+const getUserSubscribedFeeds = `-- name: GetUserSubscribedFeeds :many
+SELECT
+    f.id,
+    f.title,
+    f.feed_url,
+    f.website_url,
+    f.description,
+    f.last_fetched_at,
+    f.created_at
+FROM user_feeds uf
+JOIN feeds f ON uf.feed_id = f.id
+WHERE uf.user_id = $1
+ORDER BY uf.created_at DESC
+`
+
+func (q *Queries) GetUserSubscribedFeeds(ctx context.Context, userID int32) ([]Feed, error) {
+	rows, err := q.db.Query(ctx, getUserSubscribedFeeds, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Feed
+	for rows.Next() {
+		var i Feed
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.FeedUrl,
+			&i.WebsiteUrl,
+			&i.Description,
+			&i.LastFetchedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const unsubscribeUserFromFeed = `-- name: UnsubscribeUserFromFeed :exec
+DELETE FROM user_feeds
+WHERE user_id = $1 AND feed_id = $2
+`
+
+type UnsubscribeUserFromFeedParams struct {
+	UserID int32 `json:"user_id"`
+	FeedID int32 `json:"feed_id"`
+}
+
+func (q *Queries) UnsubscribeUserFromFeed(ctx context.Context, arg UnsubscribeUserFromFeedParams) error {
+	_, err := q.db.Exec(ctx, unsubscribeUserFromFeed, arg.UserID, arg.FeedID)
+	return err
+}

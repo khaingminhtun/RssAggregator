@@ -7,6 +7,7 @@ package repo
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -19,12 +20,12 @@ RETURNING id, feed_id, title, url, description, published_at, guid, created_at
 `
 
 type CreatePostParams struct {
-	FeedID      int32     `json:"feed_id"`
-	Title       string    `json:"title"`
-	Url         string    `json:"url"`
-	Description string    `json:"description"`
-	PublishedAt time.Time `json:"published_at"`
-	Guid        string    `json:"guid"`
+	FeedID      int32          `json:"feed_id"`
+	Title       string         `json:"title"`
+	Url         string         `json:"url"`
+	Description sql.NullString `json:"description"`
+	PublishedAt time.Time      `json:"published_at"`
+	Guid        string         `json:"guid"`
 }
 
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
@@ -93,6 +94,42 @@ func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
 	return items, nil
 }
 
+const getLatestPosts = `-- name: GetLatestPosts :many
+SELECT id, feed_id, title, url, description, published_at, guid, created_at
+FROM posts
+ORDER BY published_at DESC
+LIMIT $1
+`
+
+func (q *Queries) GetLatestPosts(ctx context.Context, limit int32) ([]Post, error) {
+	rows, err := q.db.Query(ctx, getLatestPosts, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Post
+	for rows.Next() {
+		var i Post
+		if err := rows.Scan(
+			&i.ID,
+			&i.FeedID,
+			&i.Title,
+			&i.Url,
+			&i.Description,
+			&i.PublishedAt,
+			&i.Guid,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPostByID = `-- name: GetPostByID :one
 SELECT id, feed_id, title, url, description, published_at, guid, created_at
 FROM posts
@@ -125,6 +162,102 @@ ORDER BY published_at DESC
 
 func (q *Queries) GetPostsByFeedID(ctx context.Context, feedID int32) ([]Post, error) {
 	rows, err := q.db.Query(ctx, getPostsByFeedID, feedID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Post
+	for rows.Next() {
+		var i Post
+		if err := rows.Scan(
+			&i.ID,
+			&i.FeedID,
+			&i.Title,
+			&i.Url,
+			&i.Description,
+			&i.PublishedAt,
+			&i.Guid,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPostsForUser = `-- name: GetPostsForUser :many
+SELECT
+    p.id,
+    p.feed_id,
+    p.title,
+    p.url,
+    p.description,
+    p.published_at,
+    p.guid,
+    p.created_at
+FROM posts p
+JOIN user_feeds uf ON p.feed_id = uf.feed_id
+WHERE uf.user_id = $1
+ORDER BY p.published_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetPostsForUserParams struct {
+	UserID int32 `json:"user_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetPostsForUser(ctx context.Context, arg GetPostsForUserParams) ([]Post, error) {
+	rows, err := q.db.Query(ctx, getPostsForUser, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Post
+	for rows.Next() {
+		var i Post
+		if err := rows.Scan(
+			&i.ID,
+			&i.FeedID,
+			&i.Title,
+			&i.Url,
+			&i.Description,
+			&i.PublishedAt,
+			&i.Guid,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchPosts = `-- name: SearchPosts :many
+SELECT id, feed_id, title, url, description, published_at, guid, created_at
+FROM posts
+WHERE title ILIKE '%' || $1 || '%'
+   OR description ILIKE '%' || $1 || '%'
+ORDER BY published_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type SearchPostsParams struct {
+	Column1 sql.NullString `json:"column_1"`
+	Limit   int32          `json:"limit"`
+	Offset  int32          `json:"offset"`
+}
+
+func (q *Queries) SearchPosts(ctx context.Context, arg SearchPostsParams) ([]Post, error) {
+	rows, err := q.db.Query(ctx, searchPosts, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

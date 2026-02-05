@@ -22,6 +22,7 @@ type FeedService interface {
 	GetFeedByID(ctx context.Context, id int32) (*FeedResponse, error)
 	GetAllFeeds(ctx context.Context) ([]FeedResponse, error)
 	GetFeedsByUserID(ctx context.Context, userID int32) ([]FeedResponse, error)
+	
 
 	// Update
 	UpdateFeed(ctx context.Context, feedID int32, siteUrl string) (*FeedResponse, error)
@@ -112,10 +113,7 @@ func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse
 		FeedUrl:    feedURL,
 		Title:      parsedFeed.Title,
 		WebsiteUrl: normalizedURL,
-		Description: pgtype.Text{
-			String: parsedFeed.Description,
-			Valid:  parsedFeed.Description != "",
-		},
+		Description: utils.NullString(parsedFeed.Description),
 	})
 	if err != nil {
 		log.Error("feed creation failed in DB", "feed_url", feedURL, "error", err)
@@ -246,10 +244,7 @@ func (s *service) UpdateFeed(
 		ID:      feedID,
 		Title:   parsedFeed.Title,
 		FeedUrl: feedURL,
-		Description: pgtype.Text{
-			String: parsedFeed.Description,
-			Valid:  parsedFeed.Description != "",
-		},
+		Description: utils.NullString(parsedFeed.Description),
 		WebsiteUrl: siteURL,
 		LastFetchedAt: pgtype.Timestamptz{
 			Time:  time.Now(),

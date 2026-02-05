@@ -1,6 +1,7 @@
 package posts
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -103,4 +104,78 @@ func (h *PostHandler) GetPostsByFeedID(w http.ResponseWriter, r *http.Request) {
 		"posts fetched successfully for feed",
 		posts,
 	)
+}
+
+// GET /posts/latest?limit=10 - get latest posts with limit
+func (h *PostHandler) GetLatestPosts(w http.ResponseWriter, r *http.Request) {
+	limitStr := r.URL.Query().Get("limit")
+	limit, _ := strconv.Atoi(limitStr)
+
+	posts, err := h.PostService.GetLatestPosts(
+		r.Context(),
+		int32(limit),
+	)
+	if err != nil {
+		errorHandle.RespondHTTPsError(w, r, err)
+		return
+	}
+
+	json.RespondJSON(w, http.StatusOK, "latest posts fetched successfully", posts)
+}
+
+// GET /posts/search?query=example&limit=10&offset=0 - search posts by query with pagination
+func (h *PostHandler) SearchPosts(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("q")
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+
+	posts, err := h.PostService.SearchPosts(
+		r.Context(),
+		q,
+		int32(page),
+		int32(limit),
+	)
+	if err != nil {
+		errorHandle.RespondHTTPError(w, err)
+		return
+	}
+
+	json.RespondJSON(w, http.StatusOK, "posts searched successfully", posts)
+}
+
+// GET /posts/timeline?page=1&limit=20
+// Handler to get all posts from feeds the current user is subscribed to
+func (h *PostHandler) GetTimeline(w http.ResponseWriter, r *http.Request) {
+	// Assuming userID is stored in context after auth middleware
+	userIDVal := r.Context().Value("userID")
+	userID, ok := userIDVal.(int32)
+	if !ok || userID <= 0 {
+		errorHandle.RespondHTTPError(w, fmt.Errorf("unauthorized or invalid user"))
+		return
+	}
+
+	// Pagination query params
+	pageStr := r.URL.Query().Get("page")
+	limitStr := r.URL.Query().Get("limit")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page <= 0 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 20
+	}
+
+	// Call service
+	posts, err := h.PostService.GetPostsForUser(r.Context(), userID, int32(page), int32(limit))
+	if err != nil {
+		errorHandle.RespondHTTPError(w, err)
+		return
+	}
+
+	// Respond JSON
+	json.RespondJSON(w, http.StatusOK, "timeline fetched successfully", posts)
 }

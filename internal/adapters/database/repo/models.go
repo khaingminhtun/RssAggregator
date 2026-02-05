@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -15,20 +16,20 @@ type Feed struct {
 	Title         string             `json:"title"`
 	FeedUrl       string             `json:"feed_url"`
 	WebsiteUrl    string             `json:"website_url"`
-	Description   pgtype.Text        `json:"description"`
+	Description   sql.NullString     `json:"description"`
 	LastFetchedAt pgtype.Timestamptz `json:"last_fetched_at"`
 	CreatedAt     time.Time          `json:"created_at"`
 }
 
 type Post struct {
-	ID          int32       `json:"id"`
-	FeedID      int32       `json:"feed_id"`
-	Title       string      `json:"title"`
-	Url         string      `json:"url"`
-	Description pgtype.Text `json:"description"`
-	PublishedAt time.Time   `json:"published_at"`
-	Guid        pgtype.Text `json:"guid"`
-	CreatedAt   time.Time   `json:"created_at"`
+	ID          int32          `json:"id"`
+	FeedID      int32          `json:"feed_id"`
+	Title       string         `json:"title"`
+	Url         string         `json:"url"`
+	Description sql.NullString `json:"description"`
+	PublishedAt time.Time      `json:"published_at"`
+	Guid        string         `json:"guid"`
+	CreatedAt   time.Time      `json:"created_at"`
 }
 
 type User struct {

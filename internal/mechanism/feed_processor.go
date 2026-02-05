@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/khaingminhtun/rssagg/internal/adapters/database/repo"
 	"github.com/khaingminhtun/rssagg/internal/feeds"
+	"github.com/khaingminhtun/rssagg/internal/pkg/utils"
 	"github.com/khaingminhtun/rssagg/internal/posts"
 	"golang.org/x/net/html"
 )
@@ -113,7 +114,7 @@ func (s *FeedProcessorService) ProcessFeed(ctx context.Context, feed repo.Feed) 
 			FeedID:      feed.ID,
 			Title:       item.Title,
 			Url:         item.Link,
-			Description: desc,
+			Description: utils.NullString(desc),
 			PublishedAt: publishedAt,
 			Guid:        guid,
 		})

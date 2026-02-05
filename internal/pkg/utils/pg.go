@@ -1,6 +1,10 @@
 package utils
 
-import "github.com/jackc/pgx/v5/pgtype"
+import (
+	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
+)
 
 func Text(v string) pgtype.Text {
 	if v == "" {
@@ -8,6 +12,16 @@ func Text(v string) pgtype.Text {
 	}
 	return pgtype.Text{
 		String: v,
+		Valid:  true,
+	}
+}
+
+func NullString(s string) sql.NullString {
+	if s == "" {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{
+		String: s,
 		Valid:  true,
 	}
 }

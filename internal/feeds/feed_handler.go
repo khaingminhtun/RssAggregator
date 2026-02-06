@@ -38,10 +38,7 @@ func (h *FeedHandler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 }
 
 // POST /feeds/{feedID}/subscribe
-func (h *FeedHandler) SubscribeUserToFeed(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
+func (h *FeedHandler) SubscribeUserToFeed(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract feedID from URL
 	feedIDStr := chi.URLParam(r, "feedID")
 	if feedIDStr == "" {
@@ -87,6 +84,57 @@ func (h *FeedHandler) SubscribeUserToFeed(
 		w,
 		http.StatusCreated,
 		"subscribed to feed successfully",
+		nil,
+	)
+}
+
+// POST /feeds/{feedID}/unsubscribe
+func (h *FeedHandler) UnsubscribeUserFromFeed(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract feedID from URL
+	feedIDStr := chi.URLParam(r, "feedID")
+	if feedIDStr == "" {
+		errorHandle.RespondHTTPError(
+			w,
+			errorHandle.BadRequest("feed_id is required"),
+		)
+		return
+	}
+
+	feedID, err := strconv.Atoi(feedIDStr)
+	if err != nil || feedID <= 0 {
+		errorHandle.RespondHTTPError(
+			w,
+			errorHandle.BadRequest("invalid feed_id"),
+		)
+		return
+	}
+
+	// 2. Extract userID from context (set by auth middleware)
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok || userID <= 0 {
+		errorHandle.RespondHTTPError(
+			w,
+			errorHandle.Unauthorized("authentication required"),
+		)
+		return
+	}
+
+	// 3. Unsubscribe
+	err = h.FeedService.UnsubscribeUserFromFeed(
+		r.Context(),
+		int32(userID),
+		int32(feedID),
+	)
+	if err != nil {
+		errorHandle.RespondHTTPError(w, err)
+		return
+	}
+
+	// 4. Success response
+	json.RespondJSON(
+		w,
+		http.StatusOK,
+		"unsubscribed from feed successfully",
 		nil,
 	)
 }

@@ -22,6 +22,10 @@ type PostService interface {
 	) ([]PostResponse, error)
 
 	GetPostsForUser(ctx context.Context, userID int32, page int32, limit int32) ([]PostResponse, error)
+
+	MarkPostRead(ctx context.Context, userID, postID int32, isRead bool) error
+	MarkPostFavourite(ctx context.Context, userID, postID int32, isFavourite bool) error
+	GetFavouritePostsForUser(ctx context.Context, userID int32, page int32, limit int32) ([]PostResponse, error)
 }
 
 type service struct {
@@ -141,6 +145,40 @@ func (s *service) GetPostsForUser(ctx context.Context, userID int32, page int32,
 	posts, err := s.postRepo.GetPostsForUser(ctx, userID, limit, offset)
 	if err != nil {
 		return nil, errorHandle.NotFound("no posts found for this user")
+	}
+
+	res := make([]PostResponse, 0, len(posts))
+	for _, post := range posts {
+		res = append(res, mapPostToResponse(post))
+	}
+
+	return res, nil
+}
+
+// mark post as read/unread for user
+func (s *service) MarkPostRead(ctx context.Context, userID, postID int32, isRead bool) error {
+	return s.postRepo.MarkPostRead(ctx, userID, postID, isRead)
+}
+
+// mark post as favourite/unfavourite for user
+func (s *service) MarkPostFavourite(ctx context.Context, userID, postID int32, isFavourite bool) error {
+	return s.postRepo.MarkPostFavourite(ctx, userID, postID, isFavourite)
+}
+
+// get favourite posts for user with pagination
+func (s *service) GetFavouritePostsForUser(ctx context.Context, userID int32, page int32, limit int32) ([]PostResponse, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+
+	offset := (page - 1) * limit
+
+	posts, err := s.postRepo.GetFavouritePostsForUser(ctx, userID, limit, offset)
+	if err != nil {
+		return nil, errorHandle.NotFound("no favourite posts found for this user")
 	}
 
 	res := make([]PostResponse, 0, len(posts))

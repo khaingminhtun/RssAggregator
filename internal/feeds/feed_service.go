@@ -17,12 +17,12 @@ type FeedService interface {
 	CreateFeed(ctx context.Context, siteURL string) (*FeedResponse, error)
 
 	SubscribeUserToFeed(ctx context.Context, userID int32, feedID int32) error
+	UnsubscribeUserFromFeed(ctx context.Context, userID int32, feedID int32) error
 
 	// Read
 	GetFeedByID(ctx context.Context, id int32) (*FeedResponse, error)
 	GetAllFeeds(ctx context.Context) ([]FeedResponse, error)
 	GetFeedsByUserID(ctx context.Context, userID int32) ([]FeedResponse, error)
-	
 
 	// Update
 	UpdateFeed(ctx context.Context, feedID int32, siteUrl string) (*FeedResponse, error)
@@ -110,9 +110,9 @@ func (s *service) CreateFeed(ctx context.Context, siteURL string) (*FeedResponse
 
 	// 7. Persist in DB
 	feed, err := s.feedRepo.CreateFeed(ctx, repo.CreateFeedParams{
-		FeedUrl:    feedURL,
-		Title:      parsedFeed.Title,
-		WebsiteUrl: normalizedURL,
+		FeedUrl:     feedURL,
+		Title:       parsedFeed.Title,
+		WebsiteUrl:  normalizedURL,
 		Description: utils.NullString(parsedFeed.Description),
 	})
 	if err != nil {
@@ -161,6 +161,18 @@ func (s *service) SubscribeUserToFeed(ctx context.Context, userID int32, feedID 
 	}
 
 	log.Info("user subscribed to feed", "user_id", userID, "feed_id", feed.ID)
+	return nil
+}
+
+// unsubscribe user from feed
+func (s *service) UnsubscribeUserFromFeed(ctx context.Context, userID int32, feedID int32) error {
+	err := s.feedRepo.UnsubscribeUserFromFeed(ctx, userID, feedID)
+	if err != nil {
+		log.Error("failed to unsubscribe user from feed", "user_id", userID, "feed_id", feedID, "error", err)
+		return errorHandle.DatabaseError("failed to unsubscribe from feed")
+	}
+
+	log.Info("user unsubscribed from feed", "user_id", userID, "feed_id", feedID)
 	return nil
 }
 
@@ -241,11 +253,11 @@ func (s *service) UpdateFeed(
 
 	// 5. Update feed in DB
 	updatedFeed, err := s.feedRepo.UpdateFeed(ctx, repo.UpdateFeedParams{
-		ID:      feedID,
-		Title:   parsedFeed.Title,
-		FeedUrl: feedURL,
+		ID:          feedID,
+		Title:       parsedFeed.Title,
+		FeedUrl:     feedURL,
 		Description: utils.NullString(parsedFeed.Description),
-		WebsiteUrl: siteURL,
+		WebsiteUrl:  siteURL,
 		LastFetchedAt: pgtype.Timestamptz{
 			Time:  time.Now(),
 			Valid: true,

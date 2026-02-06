@@ -18,6 +18,7 @@ type Querier interface {
 	DeleteFeedIfUnused(ctx context.Context, id int32) error
 	GetAllFeeds(ctx context.Context) ([]Feed, error)
 	GetAllPosts(ctx context.Context) ([]Post, error)
+	GetFavoritePostsByUser(ctx context.Context, arg GetFavoritePostsByUserParams) ([]Post, error)
 	GetFeedByID(ctx context.Context, id int32) (Feed, error)
 	GetFeedURLByID(ctx context.Context, id int32) (string, error)
 	GetFeedsByUserID(ctx context.Context, userID int32) ([]Feed, error)
@@ -27,11 +28,15 @@ type Querier interface {
 	GetPostsForUser(ctx context.Context, arg GetPostsForUserParams) ([]Post, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserById(ctx context.Context, id int32) (User, error)
+	GetUserPostState(ctx context.Context, arg GetUserPostStateParams) (UserPost, error)
 	GetUserSubscribedFeeds(ctx context.Context, userID int32) ([]Feed, error)
+	MarkPostFavorite(ctx context.Context, arg MarkPostFavoriteParams) error
+	MarkPostRead(ctx context.Context, arg MarkPostReadParams) error
 	SearchPosts(ctx context.Context, arg SearchPostsParams) ([]Post, error)
 	UnsubscribeUserFromFeed(ctx context.Context, arg UnsubscribeUserFromFeedParams) error
 	UpdateFeed(ctx context.Context, arg UpdateFeedParams) (Feed, error)
 	UpdateFeedFetchTime(ctx context.Context, arg UpdateFeedFetchTimeParams) (Feed, error)
+	UpsertUserPostState(ctx context.Context, arg UpsertUserPostStateParams) error
 }
 
 var _ Querier = (*Queries)(nil)

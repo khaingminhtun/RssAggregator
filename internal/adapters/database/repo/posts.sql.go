@@ -94,6 +94,60 @@ func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
 	return items, nil
 }
 
+const getFavoritePostsByUser = `-- name: GetFavoritePostsByUser :many
+SELECT
+    p.id,
+    p.feed_id,
+    p.title,
+    p.url,
+    p.description,
+    p.published_at,
+    p.guid,
+    p.created_at
+FROM posts p
+JOIN user_posts up
+  ON up.post_id = p.id
+WHERE up.user_id = $1
+  AND up.is_favorite = true
+ORDER BY p.published_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetFavoritePostsByUserParams struct {
+	UserID int32 `json:"user_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetFavoritePostsByUser(ctx context.Context, arg GetFavoritePostsByUserParams) ([]Post, error) {
+	rows, err := q.db.Query(ctx, getFavoritePostsByUser, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Post
+	for rows.Next() {
+		var i Post
+		if err := rows.Scan(
+			&i.ID,
+			&i.FeedID,
+			&i.Title,
+			&i.Url,
+			&i.Description,
+			&i.PublishedAt,
+			&i.Guid,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLatestPosts = `-- name: GetLatestPosts :many
 SELECT id, feed_id, title, url, description, published_at, guid, created_at
 FROM posts
@@ -241,6 +295,77 @@ func (q *Queries) GetPostsForUser(ctx context.Context, arg GetPostsForUserParams
 	return items, nil
 }
 
+const getUserPostState = `-- name: GetUserPostState :one
+SELECT
+    user_id,
+    post_id,
+    is_read,
+    is_favorite,
+    created_at,
+    updated_at
+FROM user_posts
+WHERE user_id = $1 AND post_id = $2
+`
+
+type GetUserPostStateParams struct {
+	UserID int32 `json:"user_id"`
+	PostID int32 `json:"post_id"`
+}
+
+func (q *Queries) GetUserPostState(ctx context.Context, arg GetUserPostStateParams) (UserPost, error) {
+	row := q.db.QueryRow(ctx, getUserPostState, arg.UserID, arg.PostID)
+	var i UserPost
+	err := row.Scan(
+		&i.UserID,
+		&i.PostID,
+		&i.IsRead,
+		&i.IsFavorite,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const markPostFavorite = `-- name: MarkPostFavorite :exec
+INSERT INTO user_posts (user_id, post_id, is_favorite)
+VALUES ($1, $2, $3)
+ON CONFLICT (user_id, post_id)
+DO UPDATE SET
+    is_favorite = EXCLUDED.is_favorite,
+    updated_at = now()
+`
+
+type MarkPostFavoriteParams struct {
+	UserID     int32 `json:"user_id"`
+	PostID     int32 `json:"post_id"`
+	IsFavorite bool  `json:"is_favorite"`
+}
+
+func (q *Queries) MarkPostFavorite(ctx context.Context, arg MarkPostFavoriteParams) error {
+	_, err := q.db.Exec(ctx, markPostFavorite, arg.UserID, arg.PostID, arg.IsFavorite)
+	return err
+}
+
+const markPostRead = `-- name: MarkPostRead :exec
+INSERT INTO user_posts (user_id, post_id, is_read)
+VALUES ($1, $2, $3)
+ON CONFLICT (user_id, post_id)
+DO UPDATE SET
+    is_read = EXCLUDED.is_read,
+    updated_at = now()
+`
+
+type MarkPostReadParams struct {
+	UserID int32 `json:"user_id"`
+	PostID int32 `json:"post_id"`
+	IsRead bool  `json:"is_read"`
+}
+
+func (q *Queries) MarkPostRead(ctx context.Context, arg MarkPostReadParams) error {
+	_, err := q.db.Exec(ctx, markPostRead, arg.UserID, arg.PostID, arg.IsRead)
+	return err
+}
+
 const searchPosts = `-- name: SearchPosts :many
 SELECT id, feed_id, title, url, description, published_at, guid, created_at
 FROM posts
@@ -283,4 +408,37 @@ func (q *Queries) SearchPosts(ctx context.Context, arg SearchPostsParams) ([]Pos
 		return nil, err
 	}
 	return items, nil
+}
+
+const upsertUserPostState = `-- name: UpsertUserPostState :exec
+INSERT INTO user_posts (
+    user_id,
+    post_id,
+    is_read,
+    is_favorite
+) VALUES (
+    $1, $2, $3, $4
+)
+ON CONFLICT (user_id, post_id)
+DO UPDATE SET
+    is_read = EXCLUDED.is_read,
+    is_favorite = EXCLUDED.is_favorite,
+    updated_at = now()
+`
+
+type UpsertUserPostStateParams struct {
+	UserID     int32 `json:"user_id"`
+	PostID     int32 `json:"post_id"`
+	IsRead     bool  `json:"is_read"`
+	IsFavorite bool  `json:"is_favorite"`
+}
+
+func (q *Queries) UpsertUserPostState(ctx context.Context, arg UpsertUserPostStateParams) error {
+	_, err := q.db.Exec(ctx, upsertUserPostState,
+		arg.UserID,
+		arg.PostID,
+		arg.IsRead,
+		arg.IsFavorite,
+	)
+	return err
 }

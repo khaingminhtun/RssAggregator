@@ -66,3 +66,5 @@ WHERE uf.feed_id = f.id
       WHERE uf2.feed_id = f.id
         AND uf2.user_id <> $1
   );
+
+

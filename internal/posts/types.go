@@ -10,3 +10,11 @@ type PostResponse struct {
 	Guid        string `json:"guid"`
 	CreatedAt   string `json:"createdAt"`
 }
+
+type MarkReadRequest struct {
+	IsRead bool `json:"isRead"`
+}
+
+type MarkFavouriteRequest struct {
+	IsFavourite bool `json:"isFavourite"`
+}

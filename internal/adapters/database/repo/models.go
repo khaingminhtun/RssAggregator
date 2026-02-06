@@ -48,3 +48,12 @@ type UserFeed struct {
 	FeedID    int32     `json:"feed_id"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type UserPost struct {
+	UserID     int32     `json:"user_id"`
+	PostID     int32     `json:"post_id"`
+	IsRead     bool      `json:"is_read"`
+	IsFavorite bool      `json:"is_favorite"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}

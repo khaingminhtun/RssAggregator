@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/khaingminhtun/rssagg/internal/auth"
 	"github.com/khaingminhtun/rssagg/internal/pkg/errorHandle"
 	"github.com/khaingminhtun/rssagg/internal/pkg/json"
 )
@@ -178,4 +179,72 @@ func (h *PostHandler) GetTimeline(w http.ResponseWriter, r *http.Request) {
 
 	// Respond JSON
 	json.RespondJSON(w, http.StatusOK, "timeline fetched successfully", posts)
+}
+
+// PATCH /posts/{id}/read - mark post as read/unread for user
+func (h *PostHandler) MarkPostRead(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		json.RespondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	postID, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		json.RespondError(w, http.StatusBadRequest, "invalid post id")
+		return
+	}
+
+	var req MarkReadRequest
+	// 1. Decode request body
+	if !json.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	if err := h.PostService.MarkPostRead(
+		r.Context(),
+		userID,
+		int32(postID),
+		req.IsRead,
+	); err != nil {
+		json.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	json.RespondJSON(w, http.StatusOK, "post read state updated",
+		nil)
+}
+
+// PATCH /posts/{id}/favorite - mark post as favourite/unfavourite for user
+func (h *PostHandler) MarkPostFavourite(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		json.RespondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	postID, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		json.RespondError(w, http.StatusBadRequest, "invalid post id")
+		return
+	}
+
+	var req MarkFavouriteRequest
+	// 1. Decode request body
+	if !json.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	if err := h.PostService.MarkPostFavourite(
+		r.Context(),
+		userID,
+		int32(postID),
+		req.IsFavourite,
+	); err != nil {
+		json.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	json.RespondJSON(w, http.StatusOK,
+		"post favourite state updated", nil)
 }

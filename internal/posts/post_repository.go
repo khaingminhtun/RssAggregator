@@ -16,6 +16,10 @@ type PostRepository interface {
 	GetLatestPosts(ctx context.Context, limit int32) ([]repo.Post, error)
 	SearchPosts(ctx context.Context, query string, limit int32, offset int32) ([]repo.Post, error)
 	GetPostsForUser(ctx context.Context, userID int32, limit int32, offset int32) ([]repo.Post, error)
+
+	MarkPostRead(ctx context.Context, userID int32, postID int32, isRead bool) error
+	MarkPostFavourite(ctx context.Context, userID int32, postID int32, isFavourite bool) error
+	GetFavouritePostsForUser(ctx context.Context, userID int32, limit int32, offset int32) ([]repo.Post, error)
 }
 
 // --- Concrete SQLC-backed implementation --- //
@@ -67,6 +71,33 @@ func (r *postRepo) SearchPosts(ctx context.Context, query string, limit int32, o
 // get posts for user with pagination
 func (r *postRepo) GetPostsForUser(ctx context.Context, userID int32, limit int32, offset int32) ([]repo.Post, error) {
 	return r.q.GetPostsForUser(ctx, repo.GetPostsForUserParams{
+		UserID: userID,
+		Limit:  limit,
+		Offset: offset,
+	})
+}
+
+// mark post as read/unread for user
+func (r *postRepo) MarkPostRead(ctx context.Context, userID int32, postID int32, isRead bool) error {
+	return r.q.MarkPostRead(ctx, repo.MarkPostReadParams{
+		UserID: userID,
+		PostID: postID,
+		IsRead: isRead,
+	})
+}
+
+// mark post as favourite/unfavourite for user
+func (r *postRepo) MarkPostFavourite(ctx context.Context, userID int32, postID int32, isFavourite bool) error {
+	return r.q.MarkPostFavorite(ctx, repo.MarkPostFavoriteParams{
+		UserID:     userID,
+		PostID:     postID,
+		IsFavorite: isFavourite,
+	})
+}
+
+// get favourite posts for user with pagination
+func (r *postRepo) GetFavouritePostsForUser(ctx context.Context, userID int32, limit int32, offset int32) ([]repo.Post, error) {
+	return r.q.GetFavoritePostsByUser(ctx, repo.GetFavoritePostsByUserParams{
 		UserID: userID,
 		Limit:  limit,
 		Offset: offset,

@@ -1,0 +1,37 @@
+# Ignore binaries
+/bin
+*.exe
+*.out
+
+# Ignore temporary files
+*.tmp
+*.log
+
+# Ignore OS-specific files
+.DS_Store
+*.swp
+*.swo
+
+# Ignore editor config / IDE files
+.vscode/
+.idea/
+*.iml
+
+# Ignore git metadata
+.git
+.gitignore
+
+# Ignore local build outputs
+*.o
+*.a
+
+# Ignore Dockerfile artifacts (optional)
+*.cache
+*.bak
+
+# Ignore tests (optional)
+*_test.go
+
+# Ignore vendor folder if using modules (optional)
+# But if you want to use vendored dependencies for reproducible builds, remove this line
+vendor/

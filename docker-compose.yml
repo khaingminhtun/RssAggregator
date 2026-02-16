@@ -11,7 +11,7 @@ services:
     ports:
       - "${DB_PORT}:5432"
     volumes:
-      - ${DB_VOLUME}:/var/lib/postgresql/data
+       - pgdata:/var/lib/postgresql/data
 
   pgadmin:
     image: dpage/pgadmin4
@@ -30,11 +30,38 @@ services:
     container_name: my_redis
     restart: always
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redisdata:/data
     command: ["redis-server", "--save", "", "--appendonly", "no"]
+    
+
+  rssagg:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rssagg_app
+    restart: always
+    ports:
+      - "${APP_PORT}:3000"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: db           # hostname of the Postgres container
+      POSTGRES_PORT: ${DB_PORT}   # usually 5432
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_HOST: redis           # hostname of Redis container
+      REDIS_PORT: ${REDIS_PORT}
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./env/.env:/app/.env:ro   # <-- read-only .env inside container
 
 volumes:
   pgdata:
+  redisdata:
 
 
   
